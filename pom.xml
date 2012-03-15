@@ -171,7 +171,7 @@ under the License.
 
   <properties>
     <compileSource>1.6</compileSource>
-    <hadoop.version>0.20.203.0</hadoop.version>
+    <hadoop.version>0.24.0-SNAPSHOT</hadoop.version>
     <maven-compiler-plugin.version>2.3.2</maven-compiler-plugin.version>
     <maven-javadoc-plugin.version>2.6</maven-javadoc-plugin.version>
     <jackson.version>1.8.0</jackson.version>
@@ -579,7 +579,19 @@ under the License.
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-core</artifactId>
+      <artifactId>hadoop-common</artifactId>
+      <version>${hadoop.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-mapreduce-client-core</artifactId>
+      <version>${hadoop.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-mapreduce-client-common</artifactId>
       <version>${hadoop.version}</version>
       <scope>provided</scope>
     </dependency>

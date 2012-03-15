@@ -32,6 +32,7 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.ipc.ProtocolSignature;
 /*end[HADOOP]*/
 
 import org.apache.log4j.Logger;
@@ -198,4 +199,14 @@ public class RPCCommunications<I extends WritableComparable,
     return proxy;
     /*end[HADOOP]*/
   }
+
+  @Override
+  public ProtocolSignature getProtocolSignature(String protocol,
+                                                long clientVersion,
+                                                int clientMethodsHash) throws IOException {
+    return ProtocolSignature.getProtocolSignature(this, protocol, clientVersion, clientMethodsHash);
+  }
+  
+
+  
 }
