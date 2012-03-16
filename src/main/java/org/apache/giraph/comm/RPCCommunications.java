@@ -25,6 +25,8 @@ import java.net.InetSocketAddress;
 /*if_not[HADOOP]
 else[HADOOP]*/
 import java.security.PrivilegedExceptionAction;
+
+import org.apache.hadoop.mapred.JobConfigurable;
 import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
 import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
@@ -33,6 +35,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.ipc.ProtocolSignature;
+import org.apache.hadoop.mapred.JobConf;
 /*end[HADOOP]*/
 
 import org.apache.log4j.Logger;
@@ -99,8 +102,10 @@ public class RPCCommunications<I extends WritableComparable,
     String localJobTokenFile = System.getenv().get(
         UserGroupInformation.HADOOP_TOKEN_FILE_LOCATION);
     if (localJobTokenFile != null) {
+      // TODO: learn how to initialize/configure JobConf objects.
+      JobConf jobConf = new JobConf();
       Credentials credentials =
-          TokenCache.loadTokens(localJobTokenFile, conf);
+          TokenCache.loadTokens(localJobTokenFile, jobConf);
       return TokenCache.getJobToken(credentials);
     }
     return null;
@@ -116,6 +121,7 @@ public class RPCCommunications<I extends WritableComparable,
    * @param jt Jobtoken indentifier.
    * @return RPC server.
    */
+  @Override
   protected Server getRPCServer(
       InetSocketAddress myAddress, int numHandlers, String jobId,
       /*if_not[HADOOP]
@@ -126,13 +132,7 @@ public class RPCCommunications<I extends WritableComparable,
       else[HADOOP]*/
       Token<JobTokenIdentifier> jt) throws IOException {
     @SuppressWarnings("deprecation")
-    String hadoopSecurityAuthorization =
-      ServiceAuthorizationManager.SERVICE_AUTHORIZATION_CONFIG;
-    if (conf.getBoolean(
-        hadoopSecurityAuthorization,
-        false)) {
-      ServiceAuthorizationManager.refresh(conf, new BspPolicyProvider());
-    }
+
     JobTokenSecretManager jobTokenSecretManager =
         new JobTokenSecretManager();
     if (jt != null) { //could be null in the case of some unit tests
@@ -141,8 +141,16 @@ public class RPCCommunications<I extends WritableComparable,
         LOG.info("getRPCServer: Added jobToken " + jt);
       }
     }
-    return RPC.getServer(this, myAddress.getHostName(), myAddress.getPort(),
+    Server server = RPC.getServer(RPCCommunications.class, this, myAddress.getHostName(), myAddress.getPort(),
         numHandlers, false, conf, jobTokenSecretManager);
+    String hadoopSecurityAuthorization =
+        ServiceAuthorizationManager.SERVICE_AUTHORIZATION_CONFIG;
+    if (conf.getBoolean(
+        hadoopSecurityAuthorization,
+        false)) {
+      server.refreshServiceAcl(conf, new BspPolicyProvider());
+    }
+    return server;
   }
   /*end[HADOOP]*/
 
