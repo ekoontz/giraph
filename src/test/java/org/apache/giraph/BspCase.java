@@ -57,7 +57,7 @@ public class BspCase extends TestCase implements Watcher {
     public final void setupConfiguration(GiraphJob job) {
         Configuration conf = job.getConfiguration();
         conf.set("mapred.jar", getJarLocation());
-
+	System.out.println("mapred.jar: " + getJarLocation());
         // Allow this test to be run on a real Hadoop setup
         if (getJobTracker() != null) {
             System.out.println("setup: Sending job to job tracker " +
