@@ -102,8 +102,8 @@ public class TestBspBasic extends BspCase {
       IOException, InterruptedException, IllegalArgumentException,
       InvocationTargetException, SecurityException, NoSuchMethodException {
 
-    LOG.debug("GOT HERE DEBUG.");
-    LOG.info("GOT HERE INFO");
+    LOG.debug("testInstantiateVertex(): DEBUG.");
+    LOG.info( "testInstantiateVertex(): INFO.");
 
     System.out.println("testInstantiateVertex: java.class.path=" +
         System.getProperty("java.class.path"));
