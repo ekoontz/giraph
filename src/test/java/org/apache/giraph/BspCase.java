@@ -21,6 +21,9 @@ package org.apache.giraph;
 import java.io.IOException;
 import java.util.List;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -40,6 +43,8 @@ import junit.framework.TestCase;
  * Extended TestCase for making setting up Bsp testing.
  */
 public class BspCase extends TestCase implements Watcher {
+    private static final Log LOG = LogFactory.getLog(BspCase.class.getName());
+
     /** JobTracker system property */
     private final String jobTracker =
         System.getProperty("prop.mapred.job.tracker");
@@ -55,6 +60,7 @@ public class BspCase extends TestCase implements Watcher {
      * Adjust the configuration to the basic test case
      */
     public final void setupConfiguration(GiraphJob job) {
+	LOG.info("GOT HERE IN BSPCASE INFO...");
         Configuration conf = job.getConfiguration();
         conf.set("mapred.jar", getJarLocation());
 	System.out.println("mapred.jar: " + getJarLocation());
@@ -205,6 +211,7 @@ public class BspCase extends TestCase implements Watcher {
             }
             zooKeeperExt.close();
         } catch (Exception e) {
+	    LOG.info("GOT HERE IN BSPCASE INFO!!!!...");
             throw new RuntimeException(e);
         }
     }

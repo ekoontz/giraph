@@ -54,6 +54,9 @@ import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.task.JobContextImpl;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -64,6 +67,7 @@ import java.util.List;
  * Unit test for many simple BSP applications.
  */
 public class TestBspBasic extends BspCase {
+  private static final Log LOG = LogFactory.getLog(TestBspBasic.class.getName());
   /**
    * Create the test case
    *
@@ -97,6 +101,10 @@ public class TestBspBasic extends BspCase {
       throws InstantiationException, IllegalAccessException,
       IOException, InterruptedException, IllegalArgumentException,
       InvocationTargetException, SecurityException, NoSuchMethodException {
+
+    LOG.debug("GOT HERE DEBUG.");
+    LOG.info("GOT HERE INFO");
+
     System.out.println("testInstantiateVertex: java.class.path=" +
         System.getProperty("java.class.path"));
     GiraphJob job = new GiraphJob(getCallingMethodName());
