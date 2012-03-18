@@ -26,7 +26,6 @@ import java.net.InetSocketAddress;
 else[HADOOP]*/
 import java.security.PrivilegedExceptionAction;
 
-import org.apache.hadoop.mapred.JobConfigurable;
 import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
 import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
@@ -99,13 +98,13 @@ public class RPCCommunications<I extends WritableComparable,
    * @return Job token.
    */
   protected Token<JobTokenIdentifier> createJobToken() throws IOException {
-    String localJobTokenFile = System.getenv().get(
-        UserGroupInformation.HADOOP_TOKEN_FILE_LOCATION);
+    String localJobTokenFile =
+      System.getenv().get(UserGroupInformation.HADOOP_TOKEN_FILE_LOCATION);
     if (localJobTokenFile != null) {
-      // TODO: learn how to initialize/configure JobConf objects.
+       // TODO: learn how to initialize/configure JobConf objects.
       JobConf jobConf = new JobConf();
       Credentials credentials =
-          TokenCache.loadTokens(localJobTokenFile, jobConf);
+        TokenCache.loadTokens(localJobTokenFile, jobConf);
       return TokenCache.getJobToken(credentials);
     }
     return null;
@@ -141,7 +140,8 @@ public class RPCCommunications<I extends WritableComparable,
         LOG.info("getRPCServer: Added jobToken " + jt);
       }
     }
-    Server server = RPC.getServer(RPCCommunications.class, this, myAddress.getHostName(), myAddress.getPort(),
+    Server server = RPC.getServer(RPCCommunications.class, this,
+        myAddress.getHostName(), myAddress.getPort(),
         numHandlers, false, conf, jobTokenSecretManager);
     String hadoopSecurityAuthorization =
         ServiceAuthorizationManager.SERVICE_AUTHORIZATION_CONFIG;
@@ -165,7 +165,7 @@ public class RPCCommunications<I extends WritableComparable,
   protected CommunicationsInterface<I, V, E, M> getRPCProxy(
     final InetSocketAddress addr,
     String jobId,
-    /*if_not[HADOOP]
+  /*if_not[HADOOP]
     Object jt)
       else[HADOOP]*/
     Token<JobTokenIdentifier> jt)
@@ -211,10 +211,9 @@ public class RPCCommunications<I extends WritableComparable,
   @Override
   public ProtocolSignature getProtocolSignature(String protocol,
                                                 long clientVersion,
-                                                int clientMethodsHash) throws IOException {
-    return ProtocolSignature.getProtocolSignature(this, protocol, clientVersion, clientMethodsHash);
+                                                int clientMethodsHash)
+    throws IOException {
+    return ProtocolSignature.getProtocolSignature(this, protocol, clientVersion,
+        clientMethodsHash);
   }
-  
-
-  
 }

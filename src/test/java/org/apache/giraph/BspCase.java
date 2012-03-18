@@ -177,38 +177,30 @@ public class BspCase extends TestCase implements Watcher {
         }
         try {
             Configuration conf = new Configuration();
-	    LOG.info("GETTING HDFS FROM CONF: " + conf);
             FileSystem hdfs = FileSystem.get(conf);
-	    LOG.info("HDFS IS: " + hdfs);
-
             // Since local jobs always use the same paths, remove them
             Path oldLocalJobPaths = new Path(
                 GiraphJob.ZOOKEEPER_MANAGER_DIR_DEFAULT);
-	    LOG.info("GOT HERE 5");
-	    FileStatus[] fileStatusArr;
-	    try {
-		fileStatusArr = hdfs.listStatus(oldLocalJobPaths);
-		LOG.info("GOT HERE 10");
-		for (FileStatus fileStatus : fileStatusArr) {
-		    if (fileStatus.isDir() &&
+            FileStatus[] fileStatusArr;
+            try {
+                fileStatusArr = hdfs.listStatus(oldLocalJobPaths);
+                for (FileStatus fileStatus : fileStatusArr) {
+                    if (fileStatus.isDir() &&
                         fileStatus.getPath().getName().contains("job_local")) {
-			System.out.println("Cleaning up local job path " +
-					   fileStatus.getPath().getName());
-			hdfs.delete(oldLocalJobPaths, true);
-		    }
-		}
-	    } catch (FileNotFoundException e) {
-		LOG.info("caught exception from listStatus: " + e);
-		LOG.info("but ignoring..");
-	    }
+                        System.out.println("Cleaning up local job path " +
+                            fileStatus.getPath().getName());
+                        hdfs.delete(oldLocalJobPaths, true);
+                    }
+                }
+            } catch (FileNotFoundException e) {
+                LOG.info("caught exception from listStatus: " + e);
+                LOG.info("but ignoring..");
+            }
             if (zkList == null) {
                 return;
             }
             ZooKeeperExt zooKeeperExt =
                 new ZooKeeperExt(zkList, 30*1000, this);
-
-
-	    LOG.info("GOT HERE 20");
 
             List<String> rootChildren = zooKeeperExt.getChildren("/", false);
             for (String rootChild : rootChildren) {
@@ -227,7 +219,6 @@ public class BspCase extends TestCase implements Watcher {
             }
             zooKeeperExt.close();
         } catch (Exception e) {
-	    LOG.info("About to throw exception: " + e);
             throw new RuntimeException(e);
         }
     }
