@@ -22,7 +22,7 @@ import java.io.IOException;
 
 import java.net.InetSocketAddress;
 
-/*if[HADOOP_SECURE]*/
+/*if[HADOOP_SECURE]
 import java.security.PrivilegedExceptionAction;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.security.TokenCache;
@@ -32,13 +32,17 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.hadoop.security.token.Token;
+else[HADOOP_SECURE]*/
 /*end[HADOOP_SECURE]*/
 
 import org.apache.log4j.Logger;
 
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.graph.GraphState;
+/*if[HADOOP_SECURE]
 import org.apache.giraph.hadoop.BspPolicyProvider;
+else[HADOOP_SECURE]*/
+/*end[HADOOP_SECURE]*/
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
@@ -137,6 +141,9 @@ public class RPCCommunications<I extends WritableComparable,
         LOG.info("getRPCServer: Added jobToken " + jt);
       }
     }
+      /*end[HADOOP_SECURE]*/
+
+    /*if[HADOOP_SECURE]
     Server server = RPC.getServer(RPCCommunications.class, this,
         myAddress.getHostName(), myAddress.getPort(),
         numHandlers, false, conf, jobTokenSecretManager);
@@ -148,8 +155,12 @@ public class RPCCommunications<I extends WritableComparable,
       server.refreshServiceAcl(conf, new BspPolicyProvider());
     }
     return server;
+    else[HADOOP_SECURE]*/
+    return RPC.getServer(this, myAddress.getHostName(), myAddress.getPort(),
+        numHandlers, false, conf, jobTokenSecretManager);
+    /*end[HADOOP_SECURE]*/
   }
-  /*end[HADOOP_SECURE]*/
+
 
   /**
    * Get the RPC proxy.

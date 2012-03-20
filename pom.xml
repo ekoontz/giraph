@@ -455,7 +455,7 @@ under the License.
 
   <profiles>
     <profile>
-      <id>hadoop_0.20</id>
+      <id>hadoop_0.20.203</id>
       <activation>
         <activeByDefault>true</activeByDefault>
       </activation>
