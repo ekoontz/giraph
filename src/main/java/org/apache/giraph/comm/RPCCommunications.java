@@ -145,7 +145,7 @@ public class RPCCommunications<I extends WritableComparable,
     if (conf.getBoolean(
           hadoopSecurityAuthorization,
           false)) {
-          server.refreshServiceAcl(conf, new BspPolicyProvider());
+      server.refreshServiceAcl(conf, new BspPolicyProvider());
     }
     return server;
   }

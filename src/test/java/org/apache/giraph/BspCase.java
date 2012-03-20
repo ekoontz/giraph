@@ -191,14 +191,10 @@ public class BspCase extends TestCase implements Watcher {
             } catch (FileNotFoundException e) {
                 System.out.println("File not found: ignoring exception.");
             }
-            System.out.println("GOT HERE 75");
 
             if (zkList == null) {
-                // we are exiting here for some reason..
-                System.out.println("GOT HERE 85");
                 return;
             }
-            System.out.println("GOT HERE 100");
             ZooKeeperExt zooKeeperExt =
                 new ZooKeeperExt(zkList, 30*1000, this);
             List<String> rootChildren = zooKeeperExt.getChildren("/", false);
@@ -218,7 +214,6 @@ public class BspCase extends TestCase implements Watcher {
             }
             zooKeeperExt.close();
         } catch (Exception e) {
-            System.out.println("GOT HERE 300");
             throw new RuntimeException(e);
         }
     }
