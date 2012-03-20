@@ -581,14 +581,6 @@ under the License.
         <hadoop.version>0.24.0-SNAPSHOT</hadoop.version>
       </properties>
       <build>
-        <resources>
-          <resource>
-            <directory>src/main/java/org/apache/giraph/hadoop</directory>
-            <excludes>
-              <exclude>BspTokenSelector.java</exclude>
-            </excludes>
-          </resource>
-        </resources>
         <plugins>
           <plugin>
             <groupId>org.sonatype.plugins</groupId>
