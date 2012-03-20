@@ -506,19 +506,6 @@ under the License.
               <symbols>HADOOP_NON_SECURE</symbols>
             </configuration>
           </plugin>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-compiler-plugin</artifactId>
-            <version>${maven-compiler-plugin.version}</version>
-            <configuration>
-              <excludes>
-                <exclude>**/BspTokenSelector.java</exclude>
-              </excludes>
-              <source>${compileSource}</source>
-              <target>${compileSource}</target>
-              <showWarnings>true</showWarnings>
-            </configuration>
-          </plugin>
         </plugins>
       </build>
     </profile>
@@ -611,18 +598,6 @@ under the License.
             </executions>
             <configuration>
               <symbols>HADOOP_SECURE</symbols>
-            </configuration>
-          </plugin>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-compiler-plugin</artifactId>
-            <version>${maven-compiler-plugin.version}</version>
-            <configuration>
-              <excludes>
-                <exclude>**/BspTokenSelector.java</exclude>
-              </excludes>
-              <source>${compileSource}</source>
-              <target>${compileSource}</target>
             </configuration>
           </plugin>
 	  <plugin>
