@@ -61,9 +61,9 @@ import org.apache.giraph.utils.MemoryUtils;
 
 import com.google.common.collect.Iterables;
 
-/*if[HADOOP_FACEBOOK]
+/*if[HADOOP_SECURE]
 import org.apache.hadoop.ipc.ProtocolSignature;
-end[HADOOP_FACEBOOK]*/
+end[HADOOP_SECURE]*/
 
 /**
  * Basic RPC communications object that implements the lower level operations
@@ -693,14 +693,14 @@ public abstract class BasicRPCCommunications<I extends WritableComparable,
     return VERSION_ID;
   }
 
-  /*if[HADOOP_FACEBOOK]
+  /*if[HADOOP_SECURE]
     public ProtocolSignature getProtocolSignature(
             String protocol,
             long clientVersion,
             int clientMethodsHash) throws IOException {
         return new ProtocolSignature(versionID, null);
     }
-end[HADOOP_FACEBOOK]*/
+end[HADOOP_SECURE]*/
 
   @Override
   public void closeConnections() throws IOException {

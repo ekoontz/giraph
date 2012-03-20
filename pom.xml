@@ -550,7 +550,7 @@ under the License.
               </execution>
             </executions>
             <configuration>
-              <symbols>HADOOP_FACEBOOK</symbols>
+              <symbols>HADOOP_SECURE</symbols>
             </configuration>
           </plugin>
           <plugin>
@@ -568,6 +568,79 @@ under the License.
         </plugins>
       </build>
     </profile>
+
+    <profile>
+      <id>hadoop_yarn</id>
+       <activation>
+        <property>
+          <name>hadoop</name>
+          <value>yarn</value>
+        </property>
+      </activation>
+      <properties>
+        <hadoop.version>0.24.0-SNAPSHOT</hadoop.version>
+      </properties>
+      <build>
+        <resources>
+          <resource>
+            <directory>src/main/java/org/apache/giraph/hadoop</directory>
+            <excludes>
+              <exclude>BspTokenSelector.java</exclude>
+            </excludes>
+          </resource>
+        </resources>
+        <plugins>
+          <plugin>
+            <groupId>org.sonatype.plugins</groupId>
+            <artifactId>munge-maven-plugin</artifactId>
+            <version>${munge-maven-plugin.version}</version>
+            <executions>
+              <execution>
+                <id>munge</id>
+                <phase>generate-sources</phase>
+                <goals>
+                  <goal>munge</goal>
+                </goals>
+              </execution>
+            </executions>
+            <configuration>
+              <symbols>HADOOP_SECURE</symbols>
+            </configuration>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <version>${maven-compiler-plugin.version}</version>
+            <configuration>
+              <excludes>
+                <exclude>**/BspTokenSelector.java</exclude>
+              </excludes>
+              <source>${compileSource}</source>
+              <target>${compileSource}</target>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+      <dependencies>
+	<dependency>
+	  <groupId>org.apache.hadoop</groupId>
+	  <artifactId>hadoop-common</artifactId>
+	  <version>${hadoop.version}</version>
+	  <scope>provided</scope>
+	</dependency>
+	<dependency>
+	  <groupId>org.apache.hadoop</groupId>
+	  <artifactId>hadoop-mapreduce-client-core</artifactId>
+	  <version>${hadoop.version}</version>
+	  <scope>provided</scope>
+	</dependency>
+	<dependency>
+	  <groupId>org.apache.hadoop</groupId>
+	  <artifactId>hadoop-mapreduce-client-common</artifactId>
+	  <version>${hadoop.version}</version>
+	</dependency>
+      </dependencies>
+    </profile>
   </profiles>
 
   <dependencies>
@@ -577,12 +650,12 @@ under the License.
       <version>3.8.1</version>
       <scope>test</scope>
     </dependency>
-    <dependency>
+<!--    <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-core</artifactId>
       <version>${hadoop.version}</version>
       <scope>provided</scope>
-    </dependency>
+    </dependency> -->
     <dependency>
       <groupId>org.codehaus.jackson</groupId>
       <artifactId>jackson-core-asl</artifactId>

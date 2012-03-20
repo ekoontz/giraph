@@ -58,11 +58,11 @@ import org.apache.hadoop.mapreduce.Mapper;
 @SuppressWarnings("rawtypes")
 public class RPCCommunications<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable>
-  /*if_not[HADOOP]
+  /*if_not[HADOOP_SECURE]
     extends BasicRPCCommunications<I, V, E, M, Object> {
-    else[HADOOP]*/
+    else[HADOOP_SECURE]*/
     extends BasicRPCCommunications<I, V, E, M, Token<JobTokenIdentifier>> {
-  /*end[HADOOP]*/
+  /*end[HADOOP_SECURE]*/
 
   /** Class logger */
   public static final Logger LOG = Logger.getLogger(RPCCommunications.class);
@@ -84,11 +84,11 @@ public class RPCCommunications<I extends WritableComparable,
     super(context, service);
   }
 
-  /*if_not[HADOOP]
+  /*if_not[HADOOP_SECURE]
     protected Object createJobToken() throws IOException {
         return null;
     }
-    else[HADOOP]*/
+    else[HADOOP_SECURE]*/
   /**
    * Create the job token.
    *
@@ -104,7 +104,7 @@ public class RPCCommunications<I extends WritableComparable,
     }
     return null;
   }
-  /*end[HADOOP]*/
+  /*end[HADOOP_SECURE]*/
 
   /**
    * Get the RPC server.
@@ -117,12 +117,12 @@ public class RPCCommunications<I extends WritableComparable,
    */
   protected Server getRPCServer(
       InetSocketAddress myAddress, int numHandlers, String jobId,
-      /*if_not[HADOOP]
+      /*if_not[HADOOP_SECURE]
             Object jt) throws IOException {
         return RPC.getServer(this, myAddress.getHostName(), myAddress.getPort(),
             numHandlers, false, conf);
     }
-      else[HADOOP]*/
+      else[HADOOP_SECURE]*/
       Token<JobTokenIdentifier> jt) throws IOException {
     @SuppressWarnings("deprecation")
     String hadoopSecurityAuthorization =
@@ -143,7 +143,7 @@ public class RPCCommunications<I extends WritableComparable,
     return RPC.getServer(this, myAddress.getHostName(), myAddress.getPort(),
         numHandlers, false, conf, jobTokenSecretManager);
   }
-  /*end[HADOOP]*/
+  /*end[HADOOP_SECURE]*/
 
   /**
    * Get the RPC proxy.
@@ -156,20 +156,20 @@ public class RPCCommunications<I extends WritableComparable,
   protected CommunicationsInterface<I, V, E, M> getRPCProxy(
     final InetSocketAddress addr,
     String jobId,
-    /*if_not[HADOOP]
+    /*if_not[HADOOP_SECURE]
     Object jt)
-      else[HADOOP]*/
+      else[HADOOP_SECURE]*/
     Token<JobTokenIdentifier> jt)
-    /*end[HADOOP]*/
+    /*end[HADOOP_SECURE]*/
     throws IOException, InterruptedException {
     final Configuration config = new Configuration(conf);
-    /*if_not[HADOOP]
+    /*if_not[HADOOP_SECURE]
         @SuppressWarnings("unchecked")
         CommunicationsInterface<I, V, E, M> proxy =
             (CommunicationsInterface<I, V, E, M>)RPC.getProxy(
                  CommunicationsInterface.class, versionID, addr, config);
         return proxy;
-      else[HADOOP]*/
+      else[HADOOP_SECURE]*/
     if (jt == null) {
       @SuppressWarnings("unchecked")
       CommunicationsInterface<I, V, E, M> proxy =
@@ -196,6 +196,6 @@ public class RPCCommunications<I extends WritableComparable,
         }
       });
     return proxy;
-    /*end[HADOOP]*/
+    /*end[HADOOP_SECURE]*/
   }
 }
