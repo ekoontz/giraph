@@ -18,6 +18,7 @@
 
 package org.apache.giraph;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.List;
 
@@ -174,18 +175,30 @@ public class BspCase extends TestCase implements Watcher {
             // Since local jobs always use the same paths, remove them
             Path oldLocalJobPaths = new Path(
                 GiraphJob.ZOOKEEPER_MANAGER_DIR_DEFAULT);
-            FileStatus [] fileStatusArr = hdfs.listStatus(oldLocalJobPaths);
-            for (FileStatus fileStatus : fileStatusArr) {
-                if (fileStatus.isDir() &&
+
+
+            FileStatus[] fileStatusArr;
+            try {
+                fileStatusArr = hdfs.listStatus(oldLocalJobPaths);
+                for (FileStatus fileStatus : fileStatusArr) {
+                    if (fileStatus.isDir() &&
                         fileStatus.getPath().getName().contains("job_local")) {
-                    System.out.println("Cleaning up local job path " +
-                                       fileStatus.getPath().getName());
-                    hdfs.delete(oldLocalJobPaths, true);
+                        System.out.println("Cleaning up local job path " +
+                            fileStatus.getPath().getName());
+                        hdfs.delete(oldLocalJobPaths, true);
+                    }
                 }
+            } catch (FileNotFoundException e) {
+                System.out.println("File not found: ignoring exception.");
             }
+            System.out.println("GOT HERE 75");
+
             if (zkList == null) {
+                // we are exiting here for some reason..
+                System.out.println("GOT HERE 85");
                 return;
             }
+            System.out.println("GOT HERE 100");
             ZooKeeperExt zooKeeperExt =
                 new ZooKeeperExt(zkList, 30*1000, this);
             List<String> rootChildren = zooKeeperExt.getChildren("/", false);
@@ -205,6 +218,7 @@ public class BspCase extends TestCase implements Watcher {
             }
             zooKeeperExt.close();
         } catch (Exception e) {
+            System.out.println("GOT HERE 300");
             throw new RuntimeException(e);
         }
     }
