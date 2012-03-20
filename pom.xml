@@ -455,6 +455,20 @@ under the License.
 
   <profiles>
     <profile>
+      <id>hadoop_0.20</id>
+      <activation>
+        <activeByDefault>true</activeByDefault>
+      </activation>
+      <dependencies>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-core</artifactId>
+          <version>${hadoop.version}</version>
+	  <scope>provided</scope>
+        </dependency>
+      </dependencies>
+    </profile>
+    <profile>
       <id>hadoop_non_secure</id>
        <activation>
         <property>
@@ -642,12 +656,6 @@ under the License.
       <version>3.8.1</version>
       <scope>test</scope>
     </dependency>
-<!--    <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-core</artifactId>
-      <version>${hadoop.version}</version>
-      <scope>provided</scope>
-    </dependency> -->
     <dependency>
       <groupId>org.codehaus.jackson</groupId>
       <artifactId>jackson-core-asl</artifactId>
