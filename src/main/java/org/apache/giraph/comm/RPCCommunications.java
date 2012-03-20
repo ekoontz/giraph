@@ -44,6 +44,10 @@ import org.apache.giraph.hadoop.BspPolicyProvider;
 else[HADOOP_SECURE]*/
 /*end[HADOOP_SECURE]*/
 import org.apache.hadoop.conf.Configuration;
+/*if[HADOOP_SECURE]
+import org.apache.hadoop.io.Text;
+else[HADOOP_SECURE]*/
+/*end[HADOOP_SECURE]*/
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.ipc.RPC;
@@ -99,18 +103,18 @@ public class RPCCommunications<I extends WritableComparable,
   Object createJobToken() throws IOException {
   /*end[HADOOP_SECURE]*/
   /*if[HADOOP_SECURE]
-        String localJobTokenFile = System.getenv().get(
-                UserGroupInformation.HADOOP_TOKEN_FILE_LOCATION);
-        if (localJobTokenFile != null) {
-            // TODO: learn how to initialize/configure JobConf objects.
-            JobConf jobConf = new JobConf();
-            Credentials credentials =
-                TokenCache.loadTokens(localJobTokenFile, jobConf);
-            return TokenCache.getJobToken(credentials);
-        }
-   else[HADOOP_SECURE]*/
-    return null;
+    String localJobTokenFile = System.getenv().get(
+        UserGroupInformation.HADOOP_TOKEN_FILE_LOCATION);
+    if (localJobTokenFile != null) {
+      // TODO: learn how to initialize/configure JobConf objects.
+      JobConf jobConf = new JobConf();
+      Credentials credentials =
+          TokenCache.loadTokens(localJobTokenFile, jobConf);
+      return TokenCache.getJobToken(credentials);
+    }
+  else[HADOOP_SECURE]*/
   /*end[HADOOP_SECURE]*/
+    return null;
   }
 
   /**
