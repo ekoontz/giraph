@@ -52,6 +52,8 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.JobID;
+// needs facebook/trunk distinction
+import org.apache.hadoop.mapreduce.task.JobContextImpl;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
@@ -114,7 +116,8 @@ public class TestBspBasic extends BspCase {
     inputFormat = BspUtils.createVertexInputFormat(job.getConfiguration());
     List<InputSplit> splitArray =
         inputFormat.getSplits(
-            new JobContext(new Configuration(), new JobID()), 1);
+            // facebook/trunk distinction
+            new JobContextImpl(new Configuration(), new JobID()), 1);
     ByteArrayOutputStream byteArrayOutputStream =
         new ByteArrayOutputStream();
     DataOutputStream outputStream =

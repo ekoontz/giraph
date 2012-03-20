@@ -698,7 +698,7 @@ public abstract class BasicRPCCommunications<I extends WritableComparable,
             String protocol,
             long clientVersion,
             int clientMethodsHash) throws IOException {
-        return new ProtocolSignature(versionID, null);
+        return new ProtocolSignature(VERSION_ID, null);
     }
 end[HADOOP_SECURE]*/
 
