@@ -44,7 +44,6 @@ import org.apache.giraph.hadoop.BspPolicyProvider;
 else[HADOOP_SECURE]*/
 /*end[HADOOP_SECURE]*/
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.ipc.RPC;
@@ -88,30 +87,31 @@ public class RPCCommunications<I extends WritableComparable,
     super(context, service);
   }
 
-    /**
-     * Create the job token.
-     *
-     * @return Job token.
-     */
-
-    /*if[HADOOP_SECURE]
-  protected Token<JobTokenIdentifier> createJobToken() throws IOException {
-      String localJobTokenFile = System.getenv().get(
-          UserGroupInformation.HADOOP_TOKEN_FILE_LOCATION);
-      if (localJobTokenFile != null) {
-          // TODO: learn how to initialize/configure JobConf objects.
-          JobConf jobConf = new JobConf();
-          Credentials credentials =
-              TokenCache.loadTokens(localJobTokenFile, jobConf);
-          return TokenCache.getJobToken(credentials);
-      }
-      return null;
-  }
+  /**
+    * Create the job token.
+    *
+    * @return Job token.
+    */
+  protected
+  /*if[HADOOP_SECURE]
+  Token<JobTokenIdentifier> createJobToken() throws IOException {
   else[HADOOP_SECURE]*/
-    protected Object createJobToken() throws IOException {
-        return null;
-    }
+  Object createJobToken() throws IOException {
   /*end[HADOOP_SECURE]*/
+  /*if[HADOOP_SECURE]
+        String localJobTokenFile = System.getenv().get(
+                UserGroupInformation.HADOOP_TOKEN_FILE_LOCATION);
+        if (localJobTokenFile != null) {
+            // TODO: learn how to initialize/configure JobConf objects.
+            JobConf jobConf = new JobConf();
+            Credentials credentials =
+                TokenCache.loadTokens(localJobTokenFile, jobConf);
+            return TokenCache.getJobToken(credentials);
+        }
+   else[HADOOP_SECURE]*/
+    return null;
+  /*end[HADOOP_SECURE]*/
+  }
 
   /**
    * Get the RPC server.
@@ -148,8 +148,8 @@ public class RPCCommunications<I extends WritableComparable,
       return server;
     else[HADOOP_SECURE]*/
       Object jt) throws IOException {
-      return RPC.getServer(this, myAddress.getHostName(), myAddress.getPort(),
-    numHandlers, false, conf);
+    return RPC.getServer(this, myAddress.getHostName(), myAddress.getPort(),
+        numHandlers, false, conf);
       /*end[HADOOP_SECURE]*/
   }
 
@@ -162,9 +162,9 @@ public class RPCCommunications<I extends WritableComparable,
    * @param jt Job token.
    * @return Proxy of the RPC server.
    */
-
+  protected
   /*if[HADOOP_SECURE]
-  protected CommunicationsInterface<I, V, E, M> getRPCProxy(
+  CommunicationsInterface<I, V, E, M> getRPCProxy(
     final InetSocketAddress addr,
     String jobId,
   Token<JobTokenIdentifier> jt)
@@ -189,26 +189,28 @@ public class RPCCommunications<I extends WritableComparable,
             owner.doAs(new PrivilegedExceptionAction<
                 CommunicationsInterface<I, V, E, M>>() {
                 @Override
-                public CommunicationsInterface<I, V, E, M> run() throws Exception {
-                    // All methods in CommunicationsInterface will be used for RPC
+                public CommunicationsInterface<I, V, E, M> run()
+                throws Exception {
+                    // All methods in CommunicationsInterface will be used for
+                    // RPC
                     return (CommunicationsInterface<I, V, E, M>) RPC.getProxy(
-                        CommunicationsInterface.class, VERSION_ID, addr, config);
+                        CommunicationsInterface.class, VERSION_ID, addr,
+                        config);
                 }
             });
         return proxy;
     }
-   else[HADOOP_SECURE]*/
-    protected CommunicationsInterface<I, V, E, M> getRPCProxy(
+  else[HADOOP_SECURE]*/
+  CommunicationsInterface<I, V, E, M> getRPCProxy(
         final InetSocketAddress addr,
         String jobId,
-      Object jt)
-        throws IOException, InterruptedException {
-        final Configuration config = new Configuration(conf);
-        @SuppressWarnings("unchecked")
-        CommunicationsInterface<I, V, E, M> proxy =
-            (CommunicationsInterface<I, V, E, M>)RPC.getProxy(
+        Object jt) throws IOException, InterruptedException {
+    final Configuration config = new Configuration(conf);
+    @SuppressWarnings("unchecked")
+    CommunicationsInterface<I, V, E, M> proxy =
+            (CommunicationsInterface<I, V, E, M>) RPC.getProxy(
                 CommunicationsInterface.class, VERSION_ID, addr, config);
-        return proxy;
-    }
-    /*end[HADOOP_SECURE]*/
+    return proxy;
+  }
+  /*end[HADOOP_SECURE]*/
 }
