@@ -571,11 +571,11 @@ under the License.
     </profile>
 
     <profile>
-      <id>hadoop_yarn</id>
+      <id>hadoop_security</id>
        <activation>
         <property>
           <name>hadoop</name>
-          <value>yarn</value>
+          <value>security</value>
         </property>
       </activation>
       <properties>
