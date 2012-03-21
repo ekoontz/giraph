@@ -152,7 +152,8 @@ public class GiraphRunner implements Tool {
 
     if (cmd.hasOption("ca")) {
       Configuration conf = job.getConfiguration();
-      for (String paramValue : Splitter.on(',').split(cmd.getOptionValue("ca"))) {
+      for (String paramValue :
+          Splitter.on(',').split(cmd.getOptionValue("ca"))) {
         String[] parts = Iterables.toArray(Splitter.on('=').split(paramValue),
             String.class);
         if (parts.length != 2) {
