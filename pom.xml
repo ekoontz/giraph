@@ -575,7 +575,7 @@ under the License.
        <activation>
         <property>
           <name>hadoop</name>
-          <value>security</value>
+          <value>secure</value>
         </property>
       </activation>
       <properties>
