@@ -571,7 +571,7 @@ under the License.
     </profile>
 
     <profile>
-      <id>hadoop_security</id>
+      <id>hadoop_secure</id>
        <activation>
         <property>
           <name>hadoop</name>
