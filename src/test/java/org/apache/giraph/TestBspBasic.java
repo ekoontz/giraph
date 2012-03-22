@@ -52,7 +52,10 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.JobID;
-
+/*if[HADOOP_SECURE]
+import org.apache.hadoop.mapreduce.task.JobContextImpl;
+else[HADOOP_SECURE]*/
+/*end[HADOOP_SECURE]*/
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -112,9 +115,15 @@ public class TestBspBasic extends BspCase {
         ", graphState" + gs);
     VertexInputFormat<LongWritable, IntWritable, FloatWritable, IntWritable>
     inputFormat = BspUtils.createVertexInputFormat(job.getConfiguration());
+    /*if[HADOOP_SECURE]
     List<InputSplit> splitArray =
         inputFormat.getSplits(
-            new JobContext(new Configuration(), new JobID()), 1);
+            new JobContextImpl(new Configuration(), new JobID()), 1);
+    else[HADOOP_SECURE]*/
+      List<InputSplit> splitArray =
+          inputFormat.getSplits(
+              new JobContext(new Configuration(), new JobID()), 1);
+    /*end[HADOOP_SECURE]*/
     ByteArrayOutputStream byteArrayOutputStream =
         new ByteArrayOutputStream();
     DataOutputStream outputStream =
