@@ -468,6 +468,29 @@ under the License.
 	  <scope>provided</scope>
         </dependency>
       </dependencies>
+
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.sonatype.plugins</groupId>
+            <artifactId>munge-maven-plugin</artifactId>
+            <version>${munge-maven-plugin.version}</version>
+            <executions>
+              <execution>
+                <id>munge</id>
+                <phase>generate-sources</phase>
+                <goals>
+                  <goal>munge</goal>
+                </goals>
+              </execution>
+            </executions>
+            <configuration>
+              <symbols>HADOOP_SECURE</symbols>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+
     </profile>
     <profile>
       <id>hadoop_non_secure</id>

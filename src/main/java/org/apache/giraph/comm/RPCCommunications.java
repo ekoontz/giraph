@@ -167,6 +167,9 @@ public class RPCCommunications<I extends WritableComparable,
    * @return Proxy of the RPC server.
    */
   protected
+/*if[HADOOP_NEWRPC]
+    else[HADOOP_NEWRPC]*/
+/*end[HADOOP_NEWRPC]*/
   /*if[HADOOP_SECURE]
   CommunicationsInterface<I, V, E, M> getRPCProxy(
     final InetSocketAddress addr,
