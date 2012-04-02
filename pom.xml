@@ -721,7 +721,7 @@ under the License.
 	      <systemProperties>
 		<property>
 		  <name>prop.jarLocation</name>
-		  <value>target/munged/giraph-${project.version}-jar-with-dependencies.jar</value>
+		  <value>target/giraph-${project.version}-jar-with-dependencies.jar</value>
 		</property>
 	      </systemProperties>
 	    </configuration>
