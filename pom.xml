@@ -599,7 +599,7 @@ under the License.
               </execution>
             </executions>
             <configuration>
-              <symbols>HADOOP_SECURE</symbols>
+              <symbols>HADOOP_SECURE,HADOOP_NEWRPC</symbols>
             </configuration>
           </plugin>
           <plugin>
@@ -645,7 +645,7 @@ under the License.
               </execution>
             </executions>
             <configuration>
-              <symbols>HADOOP_SECURE</symbols>
+              <symbols>HADOOP_SECURE,HADOOP_NEWRPC</symbols>
             </configuration>
           </plugin>
 	  <plugin>
@@ -710,7 +710,7 @@ under the License.
               </execution>
             </executions>
             <configuration>
-              <symbols>HADOOP_SECURE</symbols>
+              <symbols>HADOOP_SECURE,HADOOP_NEWRPC</symbols>
             </configuration>
           </plugin>
 	  <plugin>
