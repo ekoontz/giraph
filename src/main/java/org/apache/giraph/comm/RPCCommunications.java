@@ -65,11 +65,11 @@ import org.apache.hadoop.mapreduce.Mapper;
 @SuppressWarnings("rawtypes")
 public class RPCCommunications<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable>
-  /*if[HADOOP_SECURE]
+  /*if[HADOOP_NEWRPC]
     extends BasicRPCCommunications<I, V, E, M, Token<JobTokenIdentifier>> {
-    else[HADOOP_SECURE]*/
+    else[HADOOP_NEWRPC]*/
     extends BasicRPCCommunications<I, V, E, M, Object> {
-  /*end[HADOOP_SECURE]*/
+  /*end[HADOOP_NEWRPC]*/
 
   /** Class logger */
   public static final Logger LOG = Logger.getLogger(RPCCommunications.class);
@@ -129,7 +129,7 @@ public class RPCCommunications<I extends WritableComparable,
   @Override
   protected Server getRPCServer(
       InetSocketAddress myAddress, int numHandlers, String jobId,
-      /*if[HADOOP_SECURE]
+      /*if[HADOOP_NEWRPC]
       // needs facebook/trunk distinction.
       Token<JobTokenIdentifier> jt) throws IOException {
       @SuppressWarnings("deprecation")
@@ -150,11 +150,11 @@ public class RPCCommunications<I extends WritableComparable,
           server.refreshServiceAcl(conf, new BspPolicyProvider());
       }
       return server;
-    else[HADOOP_SECURE]*/
+    else[HADOOP_NEWRPC]*/
       Object jt) throws IOException {
     return RPC.getServer(this, myAddress.getHostName(), myAddress.getPort(),
         numHandlers, false, conf);
-      /*end[HADOOP_SECURE]*/
+      /*end[HADOOP_NEWRPC]*/
   }
 
 
@@ -170,7 +170,7 @@ public class RPCCommunications<I extends WritableComparable,
 /*if[HADOOP_NEWRPC]
     else[HADOOP_NEWRPC]*/
 /*end[HADOOP_NEWRPC]*/
-  /*if[HADOOP_SECURE]
+  /*if[HADOOP_NEWRPC]
   CommunicationsInterface<I, V, E, M> getRPCProxy(
     final InetSocketAddress addr,
     String jobId,
@@ -207,7 +207,7 @@ public class RPCCommunications<I extends WritableComparable,
             });
         return proxy;
     }
-  else[HADOOP_SECURE]*/
+  else[HADOOP_NEWRPC]*/
   CommunicationsInterface<I, V, E, M> getRPCProxy(
         final InetSocketAddress addr,
         String jobId,
@@ -219,5 +219,5 @@ public class RPCCommunications<I extends WritableComparable,
                 CommunicationsInterface.class, VERSION_ID, addr, config);
     return proxy;
   }
-  /*end[HADOOP_SECURE]*/
+  /*end[HADOOP_NEWRPC]*/
 }
