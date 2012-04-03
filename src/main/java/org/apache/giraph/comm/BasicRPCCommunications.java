@@ -696,13 +696,22 @@ public abstract class BasicRPCCommunications<I extends WritableComparable,
 
   /*if[HADOOP_OLDRPC]
   else[HADOOP_OLDRPC]*/
+  /**
+   * Get the Protocol Signature for the given protocol,
+   * client version and method.
+   *
+   * @param protocol Protocol.
+   * @param clientVersion Version of Client.
+   * @param clientMethodsHash Hash of Client methods.
+   * @return ProtocolSignature for input parameters.
+   */
   public ProtocolSignature getProtocolSignature(
-      String protocol,
-      long clientVersion,
-      int clientMethodsHash) throws IOException {
-      return new ProtocolSignature(VERSION_ID, null);
+    String protocol,
+    long clientVersion,
+    int clientMethodsHash) throws IOException {
+    return new ProtocolSignature(VERSION_ID, null);
   }
-  /*end[HADOOP_NEWRPC]*/
+  /*end[HADOOP_OLDRPC]*/
 
   @Override
   public void closeConnections() throws IOException {
