@@ -180,9 +180,6 @@ public class RPCCommunications<I extends WritableComparable,
   }
   else[HADOOP_OLDRPC]*/
 
-
-
-
   CommunicationsInterface<I, V, E, M> getRPCProxy(
         final InetSocketAddress addr,
         String jobId,
