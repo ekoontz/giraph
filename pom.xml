@@ -457,7 +457,10 @@ under the License.
     <profile>
       <id>hadoop_0.20.203</id>
       <activation>
-        <activeByDefault>true</activeByDefault>
+        <property>
+          <name>hadoop</name>
+          <value>203</value>
+        </property>
       </activation>
       <dependencies>
         <dependency>
@@ -640,6 +643,7 @@ under the License.
           <name>hadoop</name>
           <value>trunk</value>
         </property>
+        <activeByDefault>true</activeByDefault>
       </activation>
       <properties>
         <hadoop.version>0.24.0-SNAPSHOT</hadoop.version>
