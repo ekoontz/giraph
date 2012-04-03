@@ -61,9 +61,10 @@ import org.apache.giraph.utils.MemoryUtils;
 
 import com.google.common.collect.Iterables;
 
-/*if[HADOOP_SECURE]
+/*if[HADOOP_OLDRPC]
+else[HADOOP_OLDRPC]*/
 import org.apache.hadoop.ipc.ProtocolSignature;
-end[HADOOP_SECURE]*/
+/*end[HADOOP_OLDRPC]*/
 
 /**
  * Basic RPC communications object that implements the lower level operations
@@ -693,14 +694,24 @@ public abstract class BasicRPCCommunications<I extends WritableComparable,
     return VERSION_ID;
   }
 
-  /*if[HADOOP_SECURE]
-    public ProtocolSignature getProtocolSignature(
-            String protocol,
-            long clientVersion,
-            int clientMethodsHash) throws IOException {
-        return new ProtocolSignature(VERSION_ID, null);
-    }
-end[HADOOP_SECURE]*/
+  /*if[HADOOP_OLDRPC]
+  else[HADOOP_OLDRPC]*/
+  /**
+   * Get the Protocol Signature for the given protocol,
+   * client version and method.
+   *
+   * @param protocol Protocol.
+   * @param clientVersion Version of Client.
+   * @param clientMethodsHash Hash of Client methods.
+   * @return ProtocolSignature for input parameters.
+   */
+  public ProtocolSignature getProtocolSignature(
+    String protocol,
+    long clientVersion,
+    int clientMethodsHash) throws IOException {
+    return new ProtocolSignature(VERSION_ID, null);
+  }
+  /*end[HADOOP_OLDRPC]*/
 
   @Override
   public void closeConnections() throws IOException {
