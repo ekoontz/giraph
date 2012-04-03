@@ -22,8 +22,8 @@ import java.io.IOException;
 
 import java.net.InetSocketAddress;
 
-/*if[HADOOP_NONSECURE]
-else[HADOOP_NONSECURE]*/
+/*if[HADOOP_NON_SECURE]
+else[HADOOP_NON_SECURE]*/
 import java.security.PrivilegedExceptionAction;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.security.TokenCache;
@@ -33,21 +33,21 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.hadoop.security.token.Token;
-/*end[HADOOP_NONSECURE]*/
+/*end[HADOOP_NON_SECURE]*/
 
 import org.apache.log4j.Logger;
 
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.graph.GraphState;
-/*if[HADOOP_NONSECURE]
-else[HADOOP_NONSECURE]*/
+/*if[HADOOP_NON_SECURE]
+else[HADOOP_NON_SECURE]*/
 import org.apache.giraph.hadoop.BspPolicyProvider;
-/*end[HADOOP_NONSECURE]*/
+/*end[HADOOP_NON_SECURE]*/
 import org.apache.hadoop.conf.Configuration;
-/*if[HADOOP_NONSECURE]
-else[HADOOP_NONSECURE]*/
+/*if[HADOOP_NON_SECURE]
+else[HADOOP_NON_SECURE]*/
 import org.apache.hadoop.io.Text;
-/*end[HADOOP_NONSECURE]*/
+/*end[HADOOP_NON_SECURE]*/
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.ipc.RPC;
@@ -97,13 +97,13 @@ public class RPCCommunications<I extends WritableComparable,
     * @return Job token.
     */
   protected
-  /*if[HADOOP_NONSECURE]
+  /*if[HADOOP_NON_SECURE]
   Object createJobToken() throws IOException {
-  else[HADOOP_NONSECURE]*/
+  else[HADOOP_NON_SECURE]*/
   Token<JobTokenIdentifier> createJobToken() throws IOException {
-  /*end[HADOOP_NONSECURE]*/
-  /*if[HADOOP_NONSECURE]
-  else[HADOOP_NONSECURE]*/
+  /*end[HADOOP_NON_SECURE]*/
+  /*if[HADOOP_NON_SECURE]
+  else[HADOOP_NON_SECURE]*/
     String localJobTokenFile = System.getenv().get(
       UserGroupInformation.HADOOP_TOKEN_FILE_LOCATION);
     if (localJobTokenFile != null) {
@@ -113,7 +113,7 @@ public class RPCCommunications<I extends WritableComparable,
           TokenCache.loadTokens(localJobTokenFile, jobConf);
       return TokenCache.getJobToken(credentials);
     }
-  /*end[HADOOP_NONSECURE]*/
+  /*end[HADOOP_NON_SECURE]*/
     return null;
   }
 

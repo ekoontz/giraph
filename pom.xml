@@ -526,7 +526,7 @@ under the License.
               </execution>
             </executions>
             <configuration>
-              <symbols>HADOOP_NONSECURE,HADOOP_OLDRPC</symbols>
+              <symbols>HADOOP_NON_SECURE,HADOOP_OLDRPC</symbols>
             </configuration>
           </plugin>
           <plugin>
