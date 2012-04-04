@@ -646,7 +646,7 @@ under the License.
         <activeByDefault>true</activeByDefault>
       </activation>
       <properties>
-        <hadoop.version>0.24.0-SNAPSHOT</hadoop.version>
+        <hadoop.version>3.0.0-SNAPSHOT</hadoop.version>
       </properties>
       <dependencies>
 	<dependency>
