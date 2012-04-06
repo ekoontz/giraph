@@ -63,7 +63,13 @@ import com.google.common.collect.Iterables;
 
 /*if[HADOOP_FACEBOOK]
 import org.apache.hadoop.ipc.ProtocolSignature;
-end[HADOOP_FACEBOOK]*/
+/*end[HADOOP_FACEBOOK]*/
+
+/*end[HADOOP_NON_SASL_RPC]*/
+/*if[HADOOP_NON_SASL_RPC]
+else[HADOOP_NON_SASL_RPC]*/
+import org.apache.hadoop.ipc.ProtocolSignature;
+/*end[HADOOP_NON_SASL_RPC]*/
 
 /**
  * Basic RPC communications object that implements the lower level operations
@@ -698,9 +704,28 @@ public abstract class BasicRPCCommunications<I extends WritableComparable,
             String protocol,
             long clientVersion,
             int clientMethodsHash) throws IOException {
-        return new ProtocolSignature(versionID, null);
+        return new ProtocolSignature(VERSION_ID, null);
     }
 end[HADOOP_FACEBOOK]*/
+
+  /*if[HADOOP_NON_SASL_RPC]
+  else[HADOOP_NON_SASL_RPC]*/
+  /**
+   * Get the Protocol Signature for the given protocol,
+   * client version and method.
+   *
+   * @param protocol Protocol.
+   * @param clientVersion Version of Client.
+   * @param clientMethodsHash Hash of Client methods.
+   * @return ProtocolSignature for input parameters.
+   */
+  public ProtocolSignature getProtocolSignature(
+    String protocol,
+    long clientVersion,
+    int clientMethodsHash) throws IOException {
+    return new ProtocolSignature(VERSION_ID, null);
+  }
+  /*end[HADOOP_NON_SASL_RPC]*/
 
   @Override
   public void closeConnections() throws IOException {

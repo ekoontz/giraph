@@ -22,9 +22,10 @@ import java.io.IOException;
 
 import java.net.InetSocketAddress;
 
-/*if_not[HADOOP]
-else[HADOOP]*/
+/*if[HADOOP_NON_SECURE]
+else[HADOOP_NON_SECURE]*/
 import java.security.PrivilegedExceptionAction;
+import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
 import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
@@ -32,15 +33,21 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.hadoop.security.token.Token;
-/*end[HADOOP]*/
+/*end[HADOOP_NON_SECURE]*/
 
 import org.apache.log4j.Logger;
 
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.graph.GraphState;
+/*if[HADOOP_NON_SECURE]
+else[HADOOP_NON_SECURE]*/
 import org.apache.giraph.hadoop.BspPolicyProvider;
+/*end[HADOOP_NON_SECURE]*/
 import org.apache.hadoop.conf.Configuration;
+/*if[HADOOP_NON_SECURE]
+else[HADOOP_NON_SECURE]*/
 import org.apache.hadoop.io.Text;
+/*end[HADOOP_NON_SECURE]*/
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.ipc.RPC;
@@ -58,11 +65,11 @@ import org.apache.hadoop.mapreduce.Mapper;
 @SuppressWarnings("rawtypes")
 public class RPCCommunications<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable>
-  /*if_not[HADOOP]
+  /*if[HADOOP_NON_SASL_RPC]
     extends BasicRPCCommunications<I, V, E, M, Object> {
-    else[HADOOP]*/
+    else[HADOOP_NON_SASL_RPC]*/
     extends BasicRPCCommunications<I, V, E, M, Token<JobTokenIdentifier>> {
-  /*end[HADOOP]*/
+  /*end[HADOOP_NON_SASL_RPC]*/
 
   /** Class logger */
   public static final Logger LOG = Logger.getLogger(RPCCommunications.class);
@@ -84,27 +91,30 @@ public class RPCCommunications<I extends WritableComparable,
     super(context, service);
   }
 
-  /*if_not[HADOOP]
-    protected Object createJobToken() throws IOException {
-        return null;
-    }
-    else[HADOOP]*/
   /**
-   * Create the job token.
-   *
-   * @return Job token.
-   */
-  protected Token<JobTokenIdentifier> createJobToken() throws IOException {
+    * Create the job token.
+    *
+    * @return Job token.
+    */
+  protected
+  /*if[HADOOP_NON_SECURE]
+  Object createJobToken() throws IOException {
+  else[HADOOP_NON_SECURE]*/
+  Token<JobTokenIdentifier> createJobToken() throws IOException {
+  /*end[HADOOP_NON_SECURE]*/
+  /*if[HADOOP_NON_SECURE]
+  else[HADOOP_NON_SECURE]*/
     String localJobTokenFile = System.getenv().get(
-        UserGroupInformation.HADOOP_TOKEN_FILE_LOCATION);
+      UserGroupInformation.HADOOP_TOKEN_FILE_LOCATION);
     if (localJobTokenFile != null) {
+      JobConf jobConf = new JobConf(conf);
       Credentials credentials =
-          TokenCache.loadTokens(localJobTokenFile, conf);
+          TokenCache.loadTokens(localJobTokenFile, jobConf);
       return TokenCache.getJobToken(credentials);
     }
+  /*end[HADOOP_NON_SECURE]*/
     return null;
   }
-  /*end[HADOOP]*/
 
   /**
    * Get the RPC server.
@@ -115,35 +125,36 @@ public class RPCCommunications<I extends WritableComparable,
    * @param jt Jobtoken indentifier.
    * @return RPC server.
    */
+  @Override
   protected Server getRPCServer(
       InetSocketAddress myAddress, int numHandlers, String jobId,
-      /*if_not[HADOOP]
-            Object jt) throws IOException {
-        return RPC.getServer(this, myAddress.getHostName(), myAddress.getPort(),
-            numHandlers, false, conf);
-    }
-      else[HADOOP]*/
+      /*if[HADOOP_NON_SASL_RPC]
+      Object jt) throws IOException {
+    return RPC.getServer(this, myAddress.getHostName(), myAddress.getPort(),
+        numHandlers, false, conf);
+    else[HADOOP_NON_SASL_RPC]*/
       Token<JobTokenIdentifier> jt) throws IOException {
     @SuppressWarnings("deprecation")
-    String hadoopSecurityAuthorization =
-      ServiceAuthorizationManager.SERVICE_AUTHORIZATION_CONFIG;
-    if (conf.getBoolean(
-        hadoopSecurityAuthorization,
-        false)) {
-      ServiceAuthorizationManager.refresh(conf, new BspPolicyProvider());
-    }
     JobTokenSecretManager jobTokenSecretManager =
-        new JobTokenSecretManager();
+          new JobTokenSecretManager();
     if (jt != null) { //could be null in the case of some unit tests
       jobTokenSecretManager.addTokenForJob(jobId, jt);
       if (LOG.isInfoEnabled()) {
         LOG.info("getRPCServer: Added jobToken " + jt);
       }
     }
-    return RPC.getServer(this, myAddress.getHostName(), myAddress.getPort(),
-        numHandlers, false, conf, jobTokenSecretManager);
+    Server server = RPC.getServer(RPCCommunications.class, this,
+      myAddress.getHostName(), myAddress.getPort(),
+      numHandlers, false, conf, jobTokenSecretManager);
+    String hadoopSecurityAuthorization =
+      ServiceAuthorizationManager.SERVICE_AUTHORIZATION_CONFIG;
+    if (conf.getBoolean(hadoopSecurityAuthorization, false)) {
+      server.refreshServiceAcl(conf, new BspPolicyProvider());
+    }
+    return server;
+    /*end[HADOOP_NON_SASL_RPC]*/
   }
-  /*end[HADOOP]*/
+
 
   /**
    * Get the RPC proxy.
@@ -153,28 +164,32 @@ public class RPCCommunications<I extends WritableComparable,
    * @param jt Job token.
    * @return Proxy of the RPC server.
    */
-  protected CommunicationsInterface<I, V, E, M> getRPCProxy(
-    final InetSocketAddress addr,
-    String jobId,
-    /*if_not[HADOOP]
-    Object jt)
-      else[HADOOP]*/
-    Token<JobTokenIdentifier> jt)
-    /*end[HADOOP]*/
+  protected
+  /*if[HADOOP_NON_SASL_RPC]
+  CommunicationsInterface<I, V, E, M> getRPCProxy(
+        final InetSocketAddress addr,
+        String jobId,
+        Object jt) throws IOException, InterruptedException {
+    final Configuration config = new Configuration(conf);
+    @SuppressWarnings("unchecked")
+    CommunicationsInterface<I, V, E, M> proxy =
+            (CommunicationsInterface<I, V, E, M>) RPC.getProxy(
+                CommunicationsInterface.class, VERSION_ID, addr, config);
+    return proxy;
+  }
+  else[HADOOP_NON_SASL_RPC]*/
+
+  CommunicationsInterface<I, V, E, M> getRPCProxy(
+        final InetSocketAddress addr,
+        String jobId,
+        Token<JobTokenIdentifier> jt)
     throws IOException, InterruptedException {
     final Configuration config = new Configuration(conf);
-    /*if_not[HADOOP]
-        @SuppressWarnings("unchecked")
-        CommunicationsInterface<I, V, E, M> proxy =
-            (CommunicationsInterface<I, V, E, M>)RPC.getProxy(
-                 CommunicationsInterface.class, VERSION_ID, addr, config);
-        return proxy;
-      else[HADOOP]*/
     if (jt == null) {
       @SuppressWarnings("unchecked")
-      CommunicationsInterface<I, V, E, M> proxy =
-        (CommunicationsInterface<I, V, E, M>) RPC.getProxy(
-          CommunicationsInterface.class, VERSION_ID, addr, config);
+            CommunicationsInterface<I, V, E, M> proxy =
+                (CommunicationsInterface<I, V, E, M>) RPC.getProxy(
+                    CommunicationsInterface.class, VERSION_ID, addr, config);
       return proxy;
     }
     jt.setService(new Text(addr.getAddress().getHostAddress() + ":" +
@@ -185,17 +200,20 @@ public class RPCCommunications<I extends WritableComparable,
         UserGroupInformation.createRemoteUser(jobId);
     owner.addToken(jt);
     @SuppressWarnings("unchecked")
-    CommunicationsInterface<I, V, E, M> proxy =
-      owner.doAs(new PrivilegedExceptionAction<
-        CommunicationsInterface<I, V, E, M>>() {
-        @Override
-        public CommunicationsInterface<I, V, E, M> run() throws Exception {
-          // All methods in CommunicationsInterface will be used for RPC
-          return (CommunicationsInterface<I, V, E, M>) RPC.getProxy(
-            CommunicationsInterface.class, VERSION_ID, addr, config);
-        }
-      });
+        CommunicationsInterface<I, V, E, M> proxy =
+            owner.doAs(new PrivilegedExceptionAction<
+                CommunicationsInterface<I, V, E, M>>() {
+              @Override
+              public CommunicationsInterface<I, V, E, M> run()
+                throws Exception {
+                    // All methods in CommunicationsInterface will be used for
+                    // RPC
+                return (CommunicationsInterface<I, V, E, M>) RPC.getProxy(
+                        CommunicationsInterface.class, VERSION_ID, addr,
+                        config);
+              }
+            });
     return proxy;
-    /*end[HADOOP]*/
   }
+  /*end[HADOOP_NON_SASL_RPC]*/
 }
