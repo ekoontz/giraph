@@ -67,8 +67,8 @@ mvn -Phadoop_facebook -Dhadoop.jar.path=/path/to/repo/build/hadoop-0.20.1-dev-co
 
 While we provide support for unsecure and Facebook versions of Hadoop
 with the maven profiles 'hadoop_non_secure' and 'hadoop_facebook',
-respectively, we have been primarily focusing on secure Hadoop
-releases at this time.
+respectively, we have been primarily focusing on secure Hadoop releases
+at this time.
 
 -------------------------------
 
