@@ -19,7 +19,26 @@ specific language governing permissions and limitations
 under the License.
 -->
 <!-- This configuration is for Giraph-specific configs that should be set across runs -->
-
 <configuration>
-
+  <property>
+    <name>giraph.SplitMasterWorker</name>
+    <value>false</value>
+  </property>
+  <property>
+    <name>giraph.localTestMode</name>
+    <value>true</value>
+  </property>
+  <property>
+    <name>giraph.zkJar</name>
+    <value>/Users/ekoontz/.m2/repository/org/apache/zookeeper/zookeeper/3.3.3/zookeeper-3.3.3.jar:/Users/ekoontz/giraph/lib/slf4j-log4j12-1.6.1.jar:/Users/ekoontz/giraph/lib/slf4j-api-1.6.1.jar:/Users/ekoontz/giraph/lib/log4j-1.2.15.jar</value>
+  </property>
+  <property>
+    <name>hadoop.mapreduce.framework.name</name>
+    <value>yarn</value>
+  </property>
+  <property>
+    <name>giraph.foo.bar</name>
+    <value>baz42</value>
+  </property>
+  
 </configuration>
