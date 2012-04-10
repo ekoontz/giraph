@@ -638,7 +638,7 @@ under the License.
         </property>
       </activation>
       <properties>
-        <hadoop.version>0.23.1</hadoop.version>
+        <hadoop.version>0.23.3-SNAPSHOT</hadoop.version>
       </properties>
       <dependencies>
 	<dependency>

@@ -54,7 +54,7 @@ public class ImmutableOutputCommitter extends OutputCommitter {
 
   @Override
   /*if[HADOOP_NON_SECURE]
-  public void cleanupJob(JobContext jobContext)  throws IOException {
+  public void cleanupJob(JobContext jobContext) throws IOException {
   }
   else[HADOOP_NON_SECURE]*/
   /*end[HADOOP_NON_SECURE]*/

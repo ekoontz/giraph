@@ -14,7 +14,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+set -x
 # friendly message for those who forget to tell us what to do
 if [ $# = 0 ]; then
   echo "Usage: giraph [-D<Hadoop property>] <jar containing vertex> <parameters to jar>"
@@ -46,21 +46,24 @@ while [ $1 ] && [ ${1:0:2} == "-D" ] ; do
     shift
 done
 
-USER_JAR=$1
-shift
+if [ $1 == "pagerank" ]; then
+    CLASS=org.apache.giraph.benchmark.PageRankBenchmark
+    shift
+else
+    CLASS=org.apache.giraph.GiraphRunner
+    USER_JAR=$1
+    shift
 
-if [ ! -e "$USER_JAR" ]; then
-  echo "Can't find user jar (${USER_JAR}) to execute."
-  exit 1
+    if [ ! -e "$USER_JAR" ]; then
+	echo "Can't find user jar (${USER_JAR}) to execute."
+	exit 1
+    fi
+    # add user jar to classpath
+    CLASSPATH=${USER_JAR}
 fi
-
-# add user jar to classpath
-CLASSPATH=${USER_JAR}
 
 # add Giraph conf dir to classpath
 CLASSPATH=$CLASSPATH:$GIRAPH_HOME/conf
-
-CLASS=org.apache.giraph.GiraphRunner
 
 # so that filenames w/ spaces are handled correctly in loops below
 IFS=
@@ -84,7 +87,7 @@ else
 		exit 1
 	fi
 	
-	CLASSPATH2=`mvn dependency:build-classpath | grep -v "[INFO]"`
+	CLASSPATH2=`mvn -Phadoop_0.23 dependency:build-classpath | grep -v "[INFO]"`
 	CLASSPATH=$CLASSPATH:$CLASSPATH2	
 
 	for f in $GIRAPH_HOME/target/giraph*.jar ; do
@@ -113,4 +116,5 @@ fi
 GIRAPH_JARS=`echo ${JAR}:${CLASSPATH}|sed s/:/,/g`
 export HADOOP_CLASSPATH=$HADOOP_CLASSPATH:$CLASSPATH
 
+set -x
 exec "$HADOOP_HOME/bin/hadoop" --config $HADOOP_CONF_DIR jar $JAR $CLASS $HADOOP_PROPERTIES -libjars $GIRAPH_JARS  "$@"
