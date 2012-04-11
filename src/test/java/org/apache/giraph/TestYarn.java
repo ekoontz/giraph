@@ -31,22 +31,22 @@ import junit.framework.TestSuite;
 import org.apache.log4j.Logger;
 
 /**
- * Unit test for manual checkpoint restarting
+ * Unit test for Yarn
  */
-public class TestManualCheckpoint extends BspCase {
+public class TestYarn extends BspCase {
   /** Where the checkpoints will be stored and restarted */
   private final String HDFS_CHECKPOINT_DIR =
-      "/tmp/testBspCheckpoints";
+      "/tmp/testBspYarn";
 
   /** Class logger */
-  private static final Logger LOG = Logger.getLogger(TestManualCheckpoint.class);
+  private static final Logger LOG = Logger.getLogger(TestYarn.class);
 
   /**
    * Create the test case
    *
    * @param testName name of the test case
    */
-  public TestManualCheckpoint(String testName) {
+  public TestYarn(String testName) {
     super(testName);
   }
 
@@ -54,16 +54,16 @@ public class TestManualCheckpoint extends BspCase {
    * @return the suite of tests being tested
    */
   public static Test suite() {
-    return new TestSuite(TestManualCheckpoint.class);
+    return new TestSuite(TestYarn.class);
   }
 
   /**
-   * Run a sample BSP job locally and test checkpointing.
+   * Run a sample Yarn job.
    * @throws IOException
    * @throws ClassNotFoundException
    * @throws InterruptedException
    */
-  public void testBspCheckpoint()
+  public void testYarn()
       throws IOException, InterruptedException, ClassNotFoundException {
     GiraphJob job = new GiraphJob(getCallingMethodName());
     setupConfiguration(job);
@@ -88,37 +88,6 @@ public class TestManualCheckpoint extends BspCase {
           SimpleCheckpointVertex.SimpleCheckpointVertexWorkerContext.getFinalSum();
       System.out.println("testBspCheckpoint: idSum = " + idSum +
           " fileLen = " + fileLen);
-    }
-
-    // Restart the test from superstep 2
-    System.out.println(
-        "testBspCheckpoint: Restarting from superstep 2" +
-            " with checkpoint path = " + HDFS_CHECKPOINT_DIR);
-    GiraphJob restartedJob = new GiraphJob(getCallingMethodName() +
-        "Restarted");
-    setupConfiguration(restartedJob);
-    restartedJob.getConfiguration().set(GiraphJob.CHECKPOINT_DIRECTORY,
-        HDFS_CHECKPOINT_DIR);
-    restartedJob.getConfiguration().setLong(GiraphJob.RESTART_SUPERSTEP, 2);
-    restartedJob.setVertexClass(SimpleCheckpointVertex.class);
-    restartedJob.setWorkerContextClass(
-        SimpleCheckpointVertex.SimpleCheckpointVertexWorkerContext.class);
-    restartedJob.setVertexInputFormatClass(
-        SimpleSuperstepVertexInputFormat.class);
-    restartedJob.setVertexOutputFormatClass(
-        SimpleSuperstepVertexOutputFormat.class);
-    outputPath = new Path("/tmp/" + getCallingMethodName() + "Restarted");
-    removeAndSetOutput(restartedJob, outputPath);
-    assertTrue(restartedJob.run(true));
-    if (getJobTracker() == null) {
-      FileStatus fileStatus = getSinglePartFileStatus(job, outputPath);
-      fileLen = fileStatus.getLen();
-      assertTrue(fileStatus.getLen() == fileLen);
-      long idSumRestarted =
-          SimpleCheckpointVertex.SimpleCheckpointVertexWorkerContext.getFinalSum();
-      System.out.println("testBspCheckpoint: idSumRestarted = " +
-          idSumRestarted);
-      assertTrue(idSum == idSumRestarted);
     }
   }
 }

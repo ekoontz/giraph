@@ -552,11 +552,7 @@ public class GiraphJob {
     conf.set(ZOOKEEPER_LIST, serverList);
   }
 
-  public String getJar() {
-    return job.getJar();
-  }
-
-  /**
+ /**
    * Check if the configuration is local.  If it is local, do additional
    * checks due to the restrictions of LocalJobRunner.
    *
