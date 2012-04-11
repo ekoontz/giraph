@@ -552,6 +552,10 @@ public class GiraphJob {
     conf.set(ZOOKEEPER_LIST, serverList);
   }
 
+  public String getJar() {
+    return job.getJar();
+  }
+
   /**
    * Check if the configuration is local.  If it is local, do additional
    * checks due to the restrictions of LocalJobRunner.
@@ -623,8 +627,10 @@ public class GiraphJob {
     // (DEFAULT_PING_INTERVAL)
     Client.setPingInterval(conf, 60000 * 5);
 
+    LOG.debug("job.getJar()=" + job.getJar());
     if (job.getJar() == null) {
       job.setJarByClass(GiraphJob.class);
+      LOG.debug("overriding null job.getJar() with:" + job.getJar());
     }
     // Should work in MAPREDUCE-1938 to let the user jars/classes
     // get loaded first

@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import junit.framework.Test;
 import junit.framework.TestSuite;
+import org.apache.log4j.Logger;
 
 /**
  * Unit test for manual checkpoint restarting
@@ -36,6 +37,9 @@ public class TestManualCheckpoint extends BspCase {
   /** Where the checkpoints will be stored and restarted */
   private final String HDFS_CHECKPOINT_DIR =
       "/tmp/testBspCheckpoints";
+
+  /** Class logger */
+  private static final Logger LOG = Logger.getLogger(TestManualCheckpoint.class);
 
   /**
    * Create the test case
@@ -62,6 +66,7 @@ public class TestManualCheckpoint extends BspCase {
   public void testBspCheckpoint()
       throws IOException, InterruptedException, ClassNotFoundException {
     GiraphJob job = new GiraphJob(getCallingMethodName());
+    LOG.debug("(0):job.getJar()=" + job.getJar());
     setupConfiguration(job);
     job.getConfiguration().set(GiraphJob.CHECKPOINT_DIRECTORY,
         HDFS_CHECKPOINT_DIR);

@@ -105,6 +105,12 @@ if [ "$JAR" = "" ] ; then
   exit 1
 fi
 
+if [ "$HADOOP_HOME" = "" ] ; then
+  echo "HADOOP_HOME not defined: pease define it."
+  exit 1
+fi
+
+
 if [ "$HADOOP_CONF_DIR" = "" ] ; then
   HADOOP_CONF_DIR=$HADOOP_HOME/conf
   echo "No HADOOP_CONF_DIR set, using $HADOOP_HOME/conf "
