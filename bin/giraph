@@ -87,7 +87,7 @@ else
 		exit 1
 	fi
 	
-	CLASSPATH2=`mvn -Phadoop_0.23 dependency:build-classpath | grep -v "[INFO]"`
+	CLASSPATH2=`mvn -Phadoop_$HADOOP_VERSION dependency:build-classpath | grep -v "[INFO]"`
 	CLASSPATH=$CLASSPATH:$CLASSPATH2	
 
 	for f in $GIRAPH_HOME/target/giraph*.jar ; do
@@ -106,7 +106,7 @@ if [ "$JAR" = "" ] ; then
 fi
 
 if [ "$HADOOP_HOME" = "" ] ; then
-  echo "HADOOP_HOME not defined: pease define it."
+  echo "HADOOP_HOME not defined: please define it."
   exit 1
 fi
 
