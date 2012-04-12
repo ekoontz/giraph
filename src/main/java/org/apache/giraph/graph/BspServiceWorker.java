@@ -640,7 +640,7 @@ public class BspServiceWorker<I extends WritableComparable,
     }
 
     // At this point all vertices have been sent to their destinations.
-    // Move them to the worker, creating creating the empty partitions
+    // Move them to the worker, creating the empty partitions.
     movePartitionsToWorker(commService);
     for (PartitionOwner partitionOwner : masterSetPartitionOwners) {
       if (partitionOwner.getWorkerInfo().equals(getWorkerInfo()) &&

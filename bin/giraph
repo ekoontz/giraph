@@ -122,5 +122,6 @@ fi
 GIRAPH_JARS=`echo ${JAR}:${CLASSPATH}|sed s/:/,/g`
 export HADOOP_CLASSPATH=$HADOOP_CLASSPATH:$CLASSPATH
 
-set -x
-exec "$HADOOP_HOME/bin/hadoop" --config $HADOOP_CONF_DIR jar $JAR $CLASS $HADOOP_PROPERTIES -libjars $GIRAPH_JARS  "$@"
+#avoid 'HADOOP_HOME is deprecated' warnings from Hadoop.
+HADOOP_TMP=$HADOOP_HOME
+exec "$HADOOP_TMP/bin/hadoop" --config $HADOOP_CONF_DIR jar $JAR $CLASS $HADOOP_PROPERTIES -libjars $GIRAPH_JARS  "$@"

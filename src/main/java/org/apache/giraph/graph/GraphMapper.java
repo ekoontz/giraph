@@ -422,7 +422,7 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
         done = true;
         LOG.warn("While setting up job, found that computation has been" +
           " completed already. If this is unexpected, please move or remove your" +
-          " data directory: and retry job.");
+          " data directory and retry job.");
         return;
       }
       zkManager.onlineZooKeeperServers();

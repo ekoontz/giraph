@@ -24,13 +24,13 @@ under the License.
     <name>giraph.SplitMasterWorker</name>
     <value>false</value>
   </property>
-<!--  <property>
+  <property>
     <name>giraph.localTestMode</name>
     <value>true</value>
-  </property> -->
+  </property>
   <property>
     <name>giraph.zkJar</name>
-    <value>/Users/ekoontz/.m2/repository/org/apache/zookeeper/zookeeper/3.3.3/zookeeper-3.3.3.jar:/Users/ekoontz/giraph/lib/slf4j-log4j12-1.6.1.jar:/Users/ekoontz/giraph/lib/slf4j-api-1.6.1.jar:/Users/ekoontz/giraph/lib/log4j-1.2.15.jar</value>
+    <value>/Users/ekoontz/.m2/repository/org/apache/zookeeper/zookeeper/3.3.3/zookeeper-3.3.3.jar:/Users/ekoontz/.m2/repository/org/slf4j/slf4j-log4j12-1.6.1.jar:/Users/ekoontz/.m2/repository/org/slf4j/slf4j-api-1.6.1.jar:/Users/ekoontz/.m2/repository/log4j/log4j/1.2.15/log4j-1.2.15.jar:/Users/ekoontz/giraph/src/test/resources</value>
   </property>
   <property>
     <name>hadoop.mapreduce.framework.name</name>
