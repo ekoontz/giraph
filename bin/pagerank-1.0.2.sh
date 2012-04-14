@@ -14,7 +14,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-export HADOOP_HOME=/Users/ekoontz/hadoop-1-branch
-export HADOOP_VERSION=1.0.2
+export HADOOP_HOME=$HOME/hadoop-1-branch
+export MVN_PROFILE=hadoop_1.0
 rm -rf _bsp
 bin/giraph pagerank -v -w 1 -s 20 -c 0 -e 5 -V 6

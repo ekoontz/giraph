@@ -86,7 +86,7 @@ else
 		exit 1
 	fi
 	
-	CLASSPATH2=`mvn -Phadoop_$HADOOP_VERSION dependency:build-classpath | grep -v "[INFO]"`
+	CLASSPATH2=`mvn -P$MVN_PROFILE dependency:build-classpath | grep -v "[INFO]"`
 	CLASSPATH=$CLASSPATH:$CLASSPATH2	
 
 	for f in $GIRAPH_HOME/target/giraph*.jar ; do
