@@ -14,7 +14,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-set -x
 # friendly message for those who forget to tell us what to do
 if [ $# = 0 ]; then
   echo "Usage: giraph [-D<Hadoop property>] <jar containing vertex> <parameters to jar>"
@@ -121,7 +120,8 @@ fi
 # Giraph's jars to add to distributed cache via -libjar, which are csv rather than :sv
 GIRAPH_JARS=`echo ${JAR}:${CLASSPATH}|sed s/:/,/g`
 export HADOOP_CLASSPATH=$HADOOP_CLASSPATH:$CLASSPATH
-
-#avoid 'HADOOP_HOME is deprecated' warnings from Hadoop.
+#avoid 'HADOOP_HOME is deprecated' warnings from Hadoop (1.0 and above).
+HADOOP_CONF_DIR=$HADOOP_HOME/conf
 HADOOP_TMP=$HADOOP_HOME
-exec "$HADOOP_TMP/bin/hadoop" --config $HADOOP_CONF_DIR jar $JAR $CLASS $HADOOP_PROPERTIES -libjars $GIRAPH_JARS  "$@"
+unset HADOOP_HOME
+HADOOP_CONF_DIR=$HADOOP_CONF_DIR exec "$HADOOP_TMP/bin/hadoop" --config $HADOOP_CONF_DIR jar $JAR $CLASS $HADOOP_PROPERTIES -libjars $GIRAPH_JARS  "$@"
