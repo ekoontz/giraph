@@ -30,7 +30,7 @@ under the License.
   </property>
   <property>
     <name>giraph.zkJar</name>
-    <value>/Users/ekoontz/.m2/repository/org/apache/zookeeper/zookeeper/3.3.3/zookeeper-3.3.3.jar:/Users/ekoontz/.m2/repository/org/slf4j/slf4j-log4j12-1.6.1.jar:/Users/ekoontz/.m2/repository/org/slf4j/slf4j-api-1.6.1.jar:/Users/ekoontz/.m2/repository/log4j/log4j/1.2.15/log4j-1.2.15.jar:/Users/ekoontz/giraph/src/test/resources</value>
+    <value>$HOME/.m2/repository/org/apache/zookeeper/zookeeper/3.3.3/zookeeper-3.3.3.jar:$HOME/.m2/repository/org/slf4j/slf4j-log4j12-1.6.1.jar:$HOME/.m2/repository/org/slf4j/slf4j-api-1.6.1.jar:$HOME/.m2/repository/log4j/log4j/1.2.15/log4j-1.2.15.jar:$HOME/giraph/src/test/resources</value>
   </property>
   <property>
     <name>hadoop.mapreduce.framework.name</name>
