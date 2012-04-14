@@ -17,4 +17,4 @@
 export HADOOP_HOME=$HOME/hadoop-1-branch
 export MVN_PROFILE=hadoop_1.0
 rm -rf _bsp
-bin/giraph pagerank -v -w 1 -s 20 -c 0 -e 5 -V 6
+bin/giraph pagerank -v -w 1 -s 200 -c 0 -e 5 -V 20
