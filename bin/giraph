@@ -109,11 +109,13 @@ if [ "$HADOOP_HOME" = "" ] ; then
   exit 1
 fi
 
-#avoid 'HADOOP_HOME is deprecated' warnings from Hadoop (1.0 and above).
+if [ "$HADOOP_CONF_DIR" = "" ] ; then
 HADOOP_CONF_DIR=$HADOOP_HOME/conf
+fi
+#avoid 'HADOOP_HOME is deprecated' warnings from Hadoop (1.0 and above).
 HADOOP_HOME_ALIAS=$HADOOP_HOME
 unset HADOOP_HOME
-
+set -x
 if [ "$HADOOP_CONF_DIR" = "" ] ; then
   HADOOP_CONF_DIR=$HADOOP_HOME/conf
   echo "No HADOOP_CONF_DIR set, using $HADOOP_HOME/conf "
@@ -123,5 +125,7 @@ fi
 
 # Giraph's jars to add to distributed cache via -libjar, which are csv rather than :sv
 GIRAPH_JARS=`echo ${JAR}:${CLASSPATH}|sed s/:/,/g`
+# don't let double quotes through..
+GIRAPH_JARS=`echo ${GIRAPH_JARS}|sed s/,,//g`
 export HADOOP_CLASSPATH=$HADOOP_CLASSPATH:$CLASSPATH
-HADOOP_CONF_DIR=$HADOOP_CONF_DIR exec "$HADOOP_HOME_ALIAS/bin/hadoop" --config $HADOOP_CONF_DIR jar $JAR $CLASS $HADOOP_PROPERTIES -libjars $GIRAPH_JARS  "$@"
+echo HADOOP_CONF_DIR=$HADOOP_CONF_DIR exec "$HADOOP_HOME_ALIAS/bin/hadoop" --config $HADOOP_CONF_DIR jar $JAR $CLASS $HADOOP_PROPERTIES -libjars $GIRAPH_JARS  "$@"
