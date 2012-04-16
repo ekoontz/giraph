@@ -126,6 +126,6 @@ fi
 # Giraph's jars to add to distributed cache via -libjar, which are csv rather than :sv
 GIRAPH_JARS=`echo ${JAR}:${CLASSPATH}|sed s/:/,/g`
 # don't let double quotes through..
-GIRAPH_JARS=`echo ${GIRAPH_JARS}|sed s/,,//g`
+GIRAPH_JARS=`echo ${GIRAPH_JARS}|sed s/,,/,/g`
 export HADOOP_CLASSPATH=$HADOOP_CLASSPATH:$CLASSPATH
-echo HADOOP_CONF_DIR=$HADOOP_CONF_DIR exec "$HADOOP_HOME_ALIAS/bin/hadoop" --config $HADOOP_CONF_DIR jar $JAR $CLASS $HADOOP_PROPERTIES -libjars $GIRAPH_JARS  "$@"
+HADOOP_CONF_DIR=$HADOOP_CONF_DIR exec "$HADOOP_HOME_ALIAS/bin/hadoop" --config $HADOOP_CONF_DIR jar $JAR $CLASS $HADOOP_PROPERTIES -libjars $GIRAPH_JARS  "$@"
