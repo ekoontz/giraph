@@ -37,9 +37,6 @@ public class TestManualCheckpoint extends BspCase {
   private final String HDFS_CHECKPOINT_DIR =
       "/tmp/testBspCheckpoints";
 
-  /** Class logger */
-  private static final Logger LOG = Logger.getLogger(TestManualCheckpoint.class);
-
   /**
    * Create the test case
    *
