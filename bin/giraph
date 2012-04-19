@@ -39,6 +39,7 @@ THIS_DIR=`dirname "$THIS"`
 GIRAPH_HOME=`cd "$THIS_DIR/.." ; pwd`
 
 # extra properties to send straight to Hadoop
+#HADOOP_PROPERTIES=-Dgiraph.logger=DEBUG
 HADOOP_PROPERTIES=
 while [ $1 ] && [ ${1:0:2} == "-D" ] ; do
     HADOOP_PROPERTIES="$1 $HADOOP_PROPERTIES"
@@ -115,7 +116,6 @@ fi
 #avoid 'HADOOP_HOME is deprecated' warnings from Hadoop (1.0 and above).
 HADOOP_HOME_ALIAS=$HADOOP_HOME
 unset HADOOP_HOME
-set -x
 if [ "$HADOOP_CONF_DIR" = "" ] ; then
   HADOOP_CONF_DIR=$HADOOP_HOME/conf
   echo "No HADOOP_CONF_DIR set, using $HADOOP_HOME/conf "
@@ -127,5 +127,6 @@ fi
 GIRAPH_JARS=`echo ${JAR}:${CLASSPATH}|sed s/:/,/g`
 # don't let double quotes through..
 GIRAPH_JARS=`echo ${GIRAPH_JARS}|sed s/,,/,/g`
+#export HADOOP_CLASSPATH=$HADOOP_CLASSPATH:$CLASSPATH:/Users/ekoontz/hadoop-runtime/etc/hadoop
 export HADOOP_CLASSPATH=$HADOOP_CLASSPATH:$CLASSPATH
 HADOOP_CONF_DIR=$HADOOP_CONF_DIR exec "$HADOOP_HOME_ALIAS/bin/hadoop" --config $HADOOP_CONF_DIR jar $JAR $CLASS $HADOOP_PROPERTIES -libjars $GIRAPH_JARS  "$@"

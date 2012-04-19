@@ -623,6 +623,7 @@ public class GiraphJob {
     // (DEFAULT_PING_INTERVAL)
     Client.setPingInterval(conf, 60000 * 5);
 
+    LOG.debug("EUGENE IS LOGGING!!!!");
     LOG.debug("job.getJar()=" + job.getJar());
     if (job.getJar() == null) {
       job.setJarByClass(GiraphJob.class);

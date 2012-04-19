@@ -569,6 +569,7 @@ public class ZooKeeperManager {
    * wait until this task knows that the ZooKeeper servers have been onlined.
    */
   public void onlineZooKeeperServers() {
+      LOG.info("ONLINE ZOO KEEPER SERVERS!!!! YEAH ******");
     Integer taskId = zkServerPortMap.get(myHostname);
     if ((taskId != null) && (taskId.intValue() == taskPartition)) {
       File zkDirFile = new File(this.zkDir);
@@ -638,12 +639,14 @@ public class ZooKeeperManager {
             "ZooKeeper process", e);
         throw new RuntimeException(e);
       }
+      LOG.info("OOOOOKKKKKKK ZOOOKEEEEPER MAAAANAGGGGER...");
 
       // Once the server is up and running, notify that this server is up
       // and running by dropping a ready stamp.
       int connectAttempts = 0;
       final int maxConnectAttempts = 10;
       while (connectAttempts < maxConnectAttempts) {
+	  LOG.info("OOOOOKKKKKKK ZOOOKEEEEPER MAAAANAGGGGER...");
         try {
           if (LOG.isInfoEnabled()) {
             LOG.info("onlineZooKeeperServers: Connect attempt " +
@@ -682,9 +685,11 @@ public class ZooKeeperManager {
         }
       }
       if (connectAttempts == maxConnectAttempts) {
+	  LOG.debug("WHHHHAATTTT THE FUUUUCKKKK.");
+	  LOG.info("WHHHHAATTTT THE FUUUUCKKKK (info).");
         throw new IllegalStateException(
-            "onlineZooKeeperServers: Failed to connect in " +
-                connectAttempts + " tries!");
+            "onlineZooKeeperServers:(fuck): Failed to connect in " +
+	    connectAttempts + " tries!" + "; command: " + commandList + ";directory: " + execDirectory.toString());
       }
       Path myReadyPath = new Path(
           serverDirectory, myHostname +
