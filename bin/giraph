@@ -127,6 +127,4 @@ fi
 GIRAPH_JARS=`echo ${JAR}:${CLASSPATH}|sed s/:/,/g`
 # don't let double quotes through..
 GIRAPH_JARS=`echo ${GIRAPH_JARS}|sed s/,,/,/g`
-#export HADOOP_CLASSPATH=$HADOOP_CLASSPATH:$CLASSPATH:/Users/ekoontz/hadoop-runtime/etc/hadoop
-export HADOOP_CLASSPATH=$HADOOP_CLASSPATH:$CLASSPATH
 HADOOP_CONF_DIR=$HADOOP_CONF_DIR exec "$HADOOP_HOME_ALIAS/bin/hadoop" --config $HADOOP_CONF_DIR jar $JAR $CLASS $HADOOP_PROPERTIES -libjars $GIRAPH_JARS  "$@"

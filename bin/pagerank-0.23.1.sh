@@ -14,8 +14,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-export HADOOP_HOME=/Users/ekoontz/hadoop-0.23.1
-export HADOOP_CONF_DIR=/Users/ekoontz/hadoop-0.23.1/etc/hadoop
+export HADOOP_HOME=$HOME/hadoop-0.23.1
+export HADOOP_CONF_DIR=$HOME/hadoop-0.23.1/etc/hadoop
 export MVN_PROFILE=hadoop_0.23
 # Extra things could be added to HADOOP_CLASSPATH, if you want, but "" 
 # should work fine, at least for the pagerank benchmark.
