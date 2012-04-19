@@ -17,6 +17,8 @@
 export HADOOP_HOME=/Users/ekoontz/hadoop-0.23.1
 export HADOOP_CONF_DIR=/Users/ekoontz/hadoop-0.23.1/etc/hadoop
 export MVN_PROFILE=hadoop_0.23
-#export HADOOP_CLASSPATH=/Users/ekoontz/hadoop-0.23.1/etc/hadoop:/Users/ekoontz/hadoop-0.23.1/share/hadoop/common/lib/*:/Users/ekoontz/hadoop-0.23.1/share/hadoop/common/*:/Users/ekoontz/giraph/conf::/Users/ekoontz/hadoop-0.23.1/share/hadoop/hdfs:/Users/ekoontz/hadoop-0.23.1/share/hadoop/hdfs/lib/*:/Users/ekoontz/hadoop-0.23.1/share/hadoop/hdfs/*:/Users/ekoontz/hadoop-0.23.1/share/hadoop/mapreduce/lib/*:/Users/ekoontz/hadoop-0.23.1/share/hadoop/mapreduce/*:/Users/ekoontz/giraph/conf:
+# Extra things could be added to HADOOP_CLASSPATH, if you want, but "" 
+# should work fine, at least for the pagerank benchmark.
+export HADOOP_CLASSPATH=""
 rm -rf _bsp
 bin/giraph pagerank -v -w 1 -s 20 -c 0 -e 5 -V 20
