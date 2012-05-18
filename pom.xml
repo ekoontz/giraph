@@ -535,6 +535,66 @@ under the License.
       </build>
     </profile>
     <profile>
+      <id>hadoop_tm-5+2</id>
+      <properties>
+        <hadoop.version>0.20-tm-5+2</hadoop.version>
+      </properties>
+      <dependencies>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-core</artifactId>
+          <version>${hadoop.version}</version>
+	  <scope>provided</scope>
+        </dependency>
+	<dependency>
+	  <groupId>org.slf4j</groupId>
+	  <artifactId>slf4j-api</artifactId>
+	  <version>1.4.3</version>
+	  <scope>runtime</scope>
+	</dependency>
+	<dependency>
+	  <groupId>org.slf4j</groupId>
+	  <artifactId>slf4j-log4j12</artifactId>
+	  <version>1.4.3</version>
+	  <scope>runtime</scope>
+	</dependency>
+        <dependency>
+	  <groupId>commons-logging</groupId>
+          <artifactId>commons-logging-api</artifactId>
+          <version>1.0.4</version>
+	  <scope>runtime</scope>
+        </dependency>
+        <dependency>
+          <groupId>commons-httpclient</groupId>
+          <artifactId>commons-httpclient</artifactId>
+          <version>3.1</version>
+	  <scope>runtime</scope>
+        </dependency>
+      </dependencies>
+
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.sonatype.plugins</groupId>
+            <artifactId>munge-maven-plugin</artifactId>
+            <version>${munge-maven-plugin.version}</version>
+            <executions>
+              <execution>
+                <id>munge</id>
+                <phase>generate-sources</phase>
+                <goals>
+                  <goal>munge</goal>
+                </goals>
+              </execution>
+            </executions>
+            <configuration>
+              <symbols>HADOOP_NON_SASL_RPC,HADOOP_NON_INTERVERSIONED_RPC</symbols>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
       <id>hadoop_non_secure</id>
        <activation>
         <property>
