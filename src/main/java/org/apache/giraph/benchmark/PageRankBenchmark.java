@@ -117,6 +117,7 @@ public class PageRankBenchmark extends EdgeListVertex<
     }
 
     int workers = Integer.parseInt(cmd.getOptionValue('w'));
+
     GiraphJob job = new GiraphJob(getConf(), getClass().getName());
     if (!cmd.hasOption('c') ||
         (Integer.parseInt(cmd.getOptionValue('c')) == 1)) {

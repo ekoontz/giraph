@@ -476,9 +476,15 @@ public class BspServiceMaster<I extends WritableComparable,
       if (getZkExt().exists(inputSplitsPath, false) != null) {
         LOG.info(inputSplitsPath +
             " already exists, no need to create");
-        return Integer.parseInt(
-            new String(
-                getZkExt().getData(inputSplitsPath, false, null)));
+        byte[] pathData = getZkExt().getData(inputSplitsPath, false, null);
+        if (pathData != null) {
+          return Integer.parseInt(
+            new String(pathData));
+        } else {
+          LOG.error("getData() for path: " + inputSplitsPath + " returned null.");
+          return 0; // what to do here..
+        }
+
       }
     } catch (KeeperException.NoNodeException e) {
       if (LOG.isInfoEnabled()) {
