@@ -26,7 +26,6 @@ import java.net.InetSocketAddress;
 else[HADOOP_NON_SECURE]*/
 import java.security.PrivilegedExceptionAction;
 import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.JobTracker;
 import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
 import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
@@ -131,8 +130,8 @@ public class RPCCommunications<I extends WritableComparable,
       InetSocketAddress myAddress, int numHandlers, String jobId,
       /*if[HADOOP_NON_SASL_RPC]
       Object jt) throws IOException {
-    Server server = RPC.getServer(this, myAddress.getHostName(), myAddress.getPort(),
-        numHandlers, false, conf);
+    Server server = RPC.getServer(this, myAddress.getHostName(),
+        myAddress.getPort(), numHandlers, false, conf);
 
     JobTokenSecretManager jobTokenSecretManager =
         new JobTokenSecretManager();
@@ -160,12 +159,12 @@ public class RPCCommunications<I extends WritableComparable,
     String hadoopSecurityAuthorization =
       ServiceAuthorizationManager.SERVICE_AUTHORIZATION_CONFIG;
     if (conf.getBoolean(hadoopSecurityAuthorization, false)) {
-	ServiceAuthorizationManager.refresh(conf, new BspPolicyProvider());
+      ServiceAuthorizationManager.refresh(conf, new BspPolicyProvider());
     }
 
     Server server = RPC.getServer(this,
       myAddress.getHostName(), myAddress.getPort(),
-				  numHandlers, false, conf, jobTokenSecretManager);
+      numHandlers, false, conf, jobTokenSecretManager);
     return server;
   }
 

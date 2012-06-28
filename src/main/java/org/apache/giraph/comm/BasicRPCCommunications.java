@@ -902,20 +902,13 @@ public abstract class BasicRPCCommunications<I extends WritableComparable,
       Partition<I, V, E, M> partition) {
     // Internally, break up the sending so that the list doesn't get too
     // big.
-      LOG.info("STARTING: sendPartitionsReq..");
     VertexList<I, V, E, M> hadoopVertexList =
         new VertexList<I, V, E, M>();
     InetSocketAddress addr =
         getInetSocketAddress(workerInfo, partition.getPartitionId());
-    
-    LOG.info("GETTING PROXY FROM ADDRESS: " + addr);
 
     CommunicationsInterface<I, V, E, M> rpcProxy =
         peerConnections.get(addr).getRPCProxy();
-
-    if (rpcProxy == null) {
-	LOG.error("OH NO, THE RPC PROXY WAS NULL!!");
-    }
 
     if (LOG.isDebugEnabled()) {
       LOG.debug("sendPartitionReq: Sending to " + rpcProxy.getName() +
