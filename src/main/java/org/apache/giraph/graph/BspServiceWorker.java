@@ -24,6 +24,10 @@ import org.apache.giraph.bsp.ApplicationState;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.NettyWorkerClientServer;
 import org.apache.giraph.comm.RPCCommunications;
+/*if[HADOOP_NON_SECURE]
+else[HADOOP_NON_SECURE]*/
+import org.apache.giraph.comm.SecureRPCCommunications;
+/*end[HADOOP_NON_SECURE]*/
 import org.apache.giraph.comm.WorkerServer;
 import org.apache.giraph.comm.WorkerClientServer;
 import org.apache.giraph.graph.partition.Partition;
@@ -155,8 +159,13 @@ public class BspServiceWorker<I extends WritableComparable,
     if (useNetty) {
       commService =  new NettyWorkerClientServer<I, V, E, M>(context, this);
     } else {
+      /*if[HADOOP_NON_SECURE]
       commService =
           new RPCCommunications<I, V, E, M>(context, this, graphState);
+      else[HADOOP_NON_SECURE]*/
+      commService =
+        new SecureRPCCommunications<I, V, E, M>(context, this, graphState);
+/*end[HADOOP_NON_SECURE]*/
     }
     if (LOG.isInfoEnabled()) {
       LOG.info("BspServiceWorker: maxVerticesPerPartition = " +
