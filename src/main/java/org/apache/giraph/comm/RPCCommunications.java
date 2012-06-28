@@ -65,11 +65,11 @@ import org.apache.hadoop.mapreduce.Mapper;
 @SuppressWarnings("rawtypes")
 public class RPCCommunications<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable>
-  /*if[HADOOP_NON_SASL_RPC_2]
+  /*if[HADOOP_NON_SASL_RPCX]
     extends BasicRPCCommunications<I, V, E, M, Object> {
-    else[HADOOP_NON_SASL_RPC_2]*/
+    else[HADOOP_NON_SASL_RPCX]*/
     extends BasicRPCCommunications<I, V, E, M, Token<JobTokenIdentifier>> {
-  /*end[HADOOP_NON_SASL_RPC_2]*/
+  /*end[HADOOP_NON_SASL_RPCX]*/
 
   /** Class logger */
   public static final Logger LOG = Logger.getLogger(RPCCommunications.class);
@@ -128,7 +128,7 @@ public class RPCCommunications<I extends WritableComparable,
   @Override
   protected Server getRPCServer(
       InetSocketAddress myAddress, int numHandlers, String jobId,
-      /*if[HADOOP_NON_SASL_RPC]
+      /*if[HADOOP_NON_SASL_RPCX]
       Object jt) throws IOException {
     Server server = RPC.getServer(this, myAddress.getHostName(),
         myAddress.getPort(), numHandlers, false, conf);
@@ -141,10 +141,7 @@ public class RPCCommunications<I extends WritableComparable,
         LOG.info("getRPCServer: Added jobToken " + jt);
       }
     }
-
-
-    return Server;
-    else[HADOOP_NON_SASL_RPC]*/
+    else[HADOOP_NON_SASL_RPCX]*/
       Token<JobTokenIdentifier> jt) throws IOException {
     @SuppressWarnings("deprecation")
     JobTokenSecretManager jobTokenSecretManager =
@@ -165,6 +162,7 @@ public class RPCCommunications<I extends WritableComparable,
     Server server = RPC.getServer(this,
       myAddress.getHostName(), myAddress.getPort(),
       numHandlers, false, conf, jobTokenSecretManager);
+    /*end[HADOOP_NON_SASL_RPCX]*/
     return server;
   }
 
@@ -181,11 +179,11 @@ public class RPCCommunications<I extends WritableComparable,
   protected CommunicationsInterface<I, V, E, M> getRPCProxy(
     final InetSocketAddress addr,
     String jobId,
-    /*if[HADOOP_NON_SASL_RPC]
+    /*if[HADOOP_NON_SASL_RPCX]
     Object jt)
-      else[HADOOP_NON_SASL_RPC]*/
+      else[HADOOP_NON_SASL_RPCX]*/
     Token<JobTokenIdentifier> jt)
-    /*end[HADOOP_NON_SASL_RPC]*/
+    /*end[HADOOP_NON_SASL_RPCX]*/
     throws IOException, InterruptedException {
     final Configuration config = new Configuration(conf);
     /*if[HADOOP_NON_SASL_RPC]
