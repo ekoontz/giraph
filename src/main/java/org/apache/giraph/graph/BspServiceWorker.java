@@ -23,8 +23,8 @@ import net.iharder.Base64;
 import org.apache.giraph.bsp.ApplicationState;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.NettyWorkerClientServer;
-import org.apache.giraph.comm.RPCCommunications;
 /*if[HADOOP_NON_SECURE]
+import org.apache.giraph.comm.RPCCommunications;
 else[HADOOP_NON_SECURE]*/
 import org.apache.giraph.comm.SecureRPCCommunications;
 /*end[HADOOP_NON_SECURE]*/

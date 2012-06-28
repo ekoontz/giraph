@@ -569,6 +569,7 @@ under the License.
             <configuration>
               <excludes>
                 <exclude>**/BspTokenSelector.java</exclude>
+                <exclude>**/SecureRPCCommunications.java</exclude>
               </excludes>
               <source>${compileSource}</source>
               <target>${compileSource}</target>
@@ -613,6 +614,7 @@ under the License.
             <directory>src/main/java/org/apache/giraph/hadoop</directory>
             <excludes>
               <exclude>BspTokenSelector.java</exclude>
+	      <exclude>SecureRPCCommunications.java</exclude>
             </excludes>
           </resource>
         </resources>
@@ -624,6 +626,7 @@ under the License.
             <configuration>
               <excludes>
                 <exclude>**/BspTokenSelector.java</exclude>
+		<exclude>**/SecureRPCCommunications.java</exclude>
               </excludes>
               <source>${compileSource}</source>
               <target>${compileSource}</target>
