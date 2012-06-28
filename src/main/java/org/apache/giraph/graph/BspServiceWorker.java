@@ -935,7 +935,6 @@ public class BspServiceWorker<I extends WritableComparable,
           "startSuperstep: InterruptedException getting assignments", e);
     }
 
-    LOG.info("EKOONTZ GOT HERE!!! THANK YOU!!");
     if (LOG.isInfoEnabled()) {
       LOG.info("startSuperstep: Ready for computation on superstep " +
           getSuperstep() + " since worker " +
