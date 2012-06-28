@@ -110,25 +110,17 @@ public class SecureRPCCommunications<I extends WritableComparable,
     @SuppressWarnings("deprecation")
     JobTokenSecretManager jobTokenSecretManager =
       new JobTokenSecretManager();
-    if (jt != null) { //could be null in the case of some unit tests
+    if (jt != null) { //could be null in the case of some unit tests:
+      // TODO: unit tests should use SecureRPCCommunications or
+      // RPCCommunications
+      // TODO: remove jt from RPCCommunications.
       jobTokenSecretManager.addTokenForJob(jobId, jt);
       if (LOG.isInfoEnabled()) {
         LOG.info("getRPCServer: Added jobToken " + jt);
       }
     }
 
-    /*if[HADOOP_2]
-    Server server = RPC.getServer(RPCCommunications.class, this,
-      myAddress.getHostName(), myAddress.getPort(),
-      numHandlers, -1, -1, false, conf, jobTokenSecretManager);
-
-    String hadoopSecurityAuthorization =
-      ServiceAuthorizationManager.SERVICE_AUTHORIZATION_CONFIG;
-    if (conf.getBoolean(hadoopSecurityAuthorization, false)) {
-      ServiceAuthorizationManager sam = new ServiceAuthorizationManager();
-      sam.refresh(conf, new BspPolicyProvider());
-    }
-    else[HADOOP_2]*/
+    /*if[HADOOP_1]
     Server server = RPC.getServer(this,
       myAddress.getHostName(), myAddress.getPort(),
       numHandlers, false, conf, jobTokenSecretManager);
@@ -138,7 +130,18 @@ public class SecureRPCCommunications<I extends WritableComparable,
     if (conf.getBoolean(hadoopSecurityAuthorization, false)) {
       ServiceAuthorizationManager.refresh(conf, new BspPolicyProvider());
     }
-/*end[HADOOP_2]*/
+    else[HADOOP_1]*/
+    Server server = RPC.getServer(this,
+      myAddress.getHostName(), myAddress.getPort(),
+      numHandlers, false, conf);
+
+    String hadoopSecurityAuthorization =
+      ServiceAuthorizationManager.SERVICE_AUTHORIZATION_CONFIG;
+    if (conf.getBoolean(hadoopSecurityAuthorization, false)) {
+      ServiceAuthorizationManager sam = new ServiceAuthorizationManager();
+      sam.refresh(conf, new BspPolicyProvider());
+    }
+    /*end[HADOOP_1]*/
     return server;
   }
 
