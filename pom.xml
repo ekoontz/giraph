@@ -518,7 +518,7 @@ under the License.
               </execution>
             </executions>
             <configuration>
-              <symbols>HADOOP_NON_SASL_RPC,HADOOP_NON_INTERVERSIONED_RPC</symbols>
+              <symbols>HADOOP_NON_INTERVERSIONED_RPC,HADOOP_NO_JCI</symbols>
             </configuration>
           </plugin>
         </plugins>

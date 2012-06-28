@@ -26,6 +26,7 @@ import java.net.InetSocketAddress;
 else[HADOOP_NON_SECURE]*/
 import java.security.PrivilegedExceptionAction;
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.JobTracker;
 import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
 import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
@@ -65,11 +66,11 @@ import org.apache.hadoop.mapreduce.Mapper;
 @SuppressWarnings("rawtypes")
 public class RPCCommunications<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable>
-  /*if[HADOOP_NON_SASL_RPC]
+  /*if[HADOOP_NON_SASL_RPC_2]
     extends BasicRPCCommunications<I, V, E, M, Object> {
-    else[HADOOP_NON_SASL_RPC]*/
+    else[HADOOP_NON_SASL_RPC_2]*/
     extends BasicRPCCommunications<I, V, E, M, Token<JobTokenIdentifier>> {
-  /*end[HADOOP_NON_SASL_RPC]*/
+  /*end[HADOOP_NON_SASL_RPC_2]*/
 
   /** Class logger */
   public static final Logger LOG = Logger.getLogger(RPCCommunications.class);
@@ -130,8 +131,20 @@ public class RPCCommunications<I extends WritableComparable,
       InetSocketAddress myAddress, int numHandlers, String jobId,
       /*if[HADOOP_NON_SASL_RPC]
       Object jt) throws IOException {
-    return RPC.getServer(this, myAddress.getHostName(), myAddress.getPort(),
+    Server server = RPC.getServer(this, myAddress.getHostName(), myAddress.getPort(),
         numHandlers, false, conf);
+
+    JobTokenSecretManager jobTokenSecretManager =
+        new JobTokenSecretManager();
+    if (jt != null) { //could be null in the case of some unit tests
+      jobTokenSecretManager.addTokenForJob(jobId, jt);
+      if (LOG.isInfoEnabled()) {
+        LOG.info("getRPCServer: Added jobToken " + jt);
+      }
+    }
+
+
+    return Server;
     else[HADOOP_NON_SASL_RPC]*/
       Token<JobTokenIdentifier> jt) throws IOException {
     @SuppressWarnings("deprecation")
@@ -143,16 +156,17 @@ public class RPCCommunications<I extends WritableComparable,
         LOG.info("getRPCServer: Added jobToken " + jt);
       }
     }
-    Server server = RPC.getServer(RPCCommunications.class, this,
-      myAddress.getHostName(), myAddress.getPort(),
-      numHandlers, false, conf, jobTokenSecretManager);
+
     String hadoopSecurityAuthorization =
       ServiceAuthorizationManager.SERVICE_AUTHORIZATION_CONFIG;
     if (conf.getBoolean(hadoopSecurityAuthorization, false)) {
-      server.refreshServiceAcl(conf, new BspPolicyProvider());
+	ServiceAuthorizationManager.refresh(conf, new BspPolicyProvider());
     }
+
+    Server server = RPC.getServer(this,
+      myAddress.getHostName(), myAddress.getPort(),
+				  numHandlers, false, conf, jobTokenSecretManager);
     return server;
-    /*end[HADOOP_NON_SASL_RPC]*/
   }
 
 

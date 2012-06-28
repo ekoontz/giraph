@@ -59,10 +59,10 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.JobContext;
-/*if[HADOOP_NON_SASL_RPC]
-else[HADOOP_NON_SASL_RPC]*/
+/*if[HADOOP_NO_JCI]
+  else[HADOOP_NO_JCI]*/
 import org.apache.hadoop.mapreduce.task.JobContextImpl;
-/*end[HADOOP_NON_SASL_RPC]*/
+/*end[HADOOP_NO_JCI]*/
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
@@ -116,15 +116,15 @@ public class TestBspBasic extends BspCase {
         ", graphState" + gs);
     VertexInputFormat<LongWritable, IntWritable, FloatWritable, IntWritable>
     inputFormat = BspUtils.createVertexInputFormat(job.getConfiguration());
-    /*if[HADOOP_NON_SASL_RPC]
+    /*if[HADOOP_NO_JCI]
       List<InputSplit> splitArray =
           inputFormat.getSplits(
               new JobContext(new Configuration(), new JobID()), 1);
-    else[HADOOP_NON_SASL_RPC]*/
+    else[HADOOP_NO_JCI]*/
       List<InputSplit> splitArray =
           inputFormat.getSplits(
               new JobContextImpl(new Configuration(), new JobID()), 1);
-      /*end[HADOOP_NON_SASL_RPC]*/
+      /*end[HADOOP_NO_JCI]*/
     ByteArrayOutputStream byteArrayOutputStream =
         new ByteArrayOutputStream();
     DataOutputStream outputStream = new DataOutputStream(byteArrayOutputStream);
