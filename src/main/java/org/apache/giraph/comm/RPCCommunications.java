@@ -143,20 +143,42 @@ public class RPCCommunications<I extends WritableComparable,
         LOG.info("getRPCServer: Added jobToken " + jt);
       }
     }
-
-    String hadoopSecurityAuthorization =
-      ServiceAuthorizationManager.SERVICE_AUTHORIZATION_CONFIG;
-    if (conf.getBoolean(hadoopSecurityAuthorization, false)) {
-      ServiceAuthorizationManager.refresh(conf, new BspPolicyProvider());
-    }
-
-    Server server = RPC.getServer(this,
-      myAddress.getHostName(), myAddress.getPort(),
-      numHandlers, false, conf, jobTokenSecretManager);
+    Server server = authorize(myAddress,numHandlers,jobTokenSecretManager,
+       conf);
     /*end[HADOOP_NON_SECURE]*/
     return server;
   }
 
+/*if[HADOOP_2]
+    private Server authorize(InetSocketAddress myAddress, int numHandlers, 
+       JobTokenSecretManager jobTokenSecretManager, Configuration conf) throws IOException {
+      Server server = RPC.getServer(RPCCommunications.class,this,
+      myAddress.getHostName(), myAddress.getPort(),
+      numHandlers, -1, -1, false, conf, jobTokenSecretManager);
+
+      String hadoopSecurityAuthorization =
+        ServiceAuthorizationManager.SERVICE_AUTHORIZATION_CONFIG;
+      if (conf.getBoolean(hadoopSecurityAuthorization, false)) {
+        ServiceAuthorizationManager sam = new ServiceAuthorizationManager();
+        sam.refresh(conf,new BspPolicyProvider());
+      }
+      return server;
+    }
+else[HADOOP_2]*/
+    private Server authorize(InetSocketAddress myAddress, int numHandlers, 
+       JobTokenSecretManager jobTokenSecretManager, Configuration conf) throws IOException {
+     Server server = RPC.getServer(this,
+       myAddress.getHostName(), myAddress.getPort(),
+       numHandlers, false, conf, jobTokenSecretManager);
+
+      String hadoopSecurityAuthorization =
+        ServiceAuthorizationManager.SERVICE_AUTHORIZATION_CONFIG;
+      if (conf.getBoolean(hadoopSecurityAuthorization, false)) {
+        ServiceAuthorizationManager.refresh(conf, new BspPolicyProvider());
+      }
+      return server;
+    }
+/*end[HADOOP_2]*/
 
   /**
    * Get the RPC proxy.

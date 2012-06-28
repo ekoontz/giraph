@@ -693,6 +693,31 @@ under the License.
 	  <version>${hadoop.version}</version>
 	</dependency>
       </dependencies>
+
+
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.sonatype.plugins</groupId>
+            <artifactId>munge-maven-plugin</artifactId>
+            <version>${munge-maven-plugin.version}</version>
+            <executions>
+              <execution>
+                <id>munge</id>
+                <phase>generate-sources</phase>
+                <goals>
+                  <goal>munge</goal>
+                </goals>
+              </execution>
+            </executions>
+            <configuration>
+              <symbols>HADOOP_2</symbols>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+
+
     </profile>
 
     <profile>
