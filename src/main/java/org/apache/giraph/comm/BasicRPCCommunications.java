@@ -906,7 +906,6 @@ public abstract class BasicRPCCommunications<I extends WritableComparable,
         new VertexList<I, V, E, M>();
     InetSocketAddress addr =
         getInetSocketAddress(workerInfo, partition.getPartitionId());
-
     CommunicationsInterface<I, V, E, M> rpcProxy =
         peerConnections.get(addr).getRPCProxy();
 
