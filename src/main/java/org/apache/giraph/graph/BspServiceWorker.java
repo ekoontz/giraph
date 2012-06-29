@@ -754,9 +754,6 @@ public class BspServiceWorker<I extends WritableComparable,
    * @param superstep Superstep to get the aggregated values from
    */
   private void getAggregatorValues(long superstep) {
-    if (superstep <= (INPUT_SUPERSTEP + 1)) {
-      return;
-    }
     String mergedAggregatorPath =
         getMergedAggregatorPath(getApplicationAttempt(), superstep - 1);
     JSONArray aggregatorArray = null;
@@ -1070,9 +1067,7 @@ public class BspServiceWorker<I extends WritableComparable,
     getGraphMapper().getGraphState().
     setNumEdges(globalStats.getEdgeCount()).
     setNumVertices(globalStats.getVertexCount());
-    return (globalStats.getFinishedVertexCount() ==
-        globalStats.getVertexCount()) &&
-        (globalStats.getMessageCount() == 0);
+    return globalStats.getHaltComputation();
   }
 
   /**
