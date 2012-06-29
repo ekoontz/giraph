@@ -60,10 +60,10 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.JobContext;
-/*if[HADOOP_1]
-else[HADOOP_1]*/
+/*if[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]
+else[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]*/
 import org.apache.hadoop.mapreduce.task.JobContextImpl;
-/*end[HADOOP_1]*/
+/*end[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]*/
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
@@ -117,15 +117,15 @@ public class TestBspBasic extends BspCase {
         ", graphState" + gs);
     VertexInputFormat<LongWritable, IntWritable, FloatWritable, IntWritable>
     inputFormat = BspUtils.createVertexInputFormat(job.getConfiguration());
-    /*if[HADOOP_1]
+    /*if[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]
       List<InputSplit> splitArray =
           inputFormat.getSplits(
               new JobContext(new Configuration(), new JobID()), 1);
-    else[HADOOP_1]*/
+    else[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]*/
       List<InputSplit> splitArray =
           inputFormat.getSplits(
               new JobContextImpl(new Configuration(), new JobID()), 1);
-      /*end[HADOOP_1]*/
+      /*end[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]*/
     ByteArrayOutputStream byteArrayOutputStream =
         new ByteArrayOutputStream();
     DataOutputStream outputStream = new DataOutputStream(byteArrayOutputStream);

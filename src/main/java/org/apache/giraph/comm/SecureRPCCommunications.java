@@ -45,10 +45,10 @@ import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.hadoop.BspPolicyProvider;
 
 
-/*if[HADOOP_1]
-else[HADOOP_1]*/
+/*if[HADOOP_NON_INTERVERSIONED_RPC]
+else[HADOOP_NON_INTERVERSIONED_RPC]*/
 import org.apache.hadoop.ipc.ProtocolSignature;
-/*end[HADOOP_1]*/
+/*end[HADOOP_NON_INTERVERSIONED_RPC]*/
 
 /**
  * Used to implement abstract {@link BasicRPCCommunications} methods.
@@ -100,8 +100,8 @@ public class SecureRPCCommunications<I extends WritableComparable,
     return null;
   }
 
-  /*if[HADOOP_1]
-  else[HADOOP_1]*/
+  /*if[HADOOP_NON_INTERVERSIONED_RPC]
+  else[HADOOP_NON_INTERVERSIONED_RPC]*/
   /**
    * Get the Protocol Signature for the given protocol,
    * client version and method.
@@ -117,7 +117,7 @@ public class SecureRPCCommunications<I extends WritableComparable,
     int clientMethodsHash) throws IOException {
     return new ProtocolSignature(VERSION_ID, null);
   }
-  /*end[HADOOP_1]*/
+  /*end[HADOOP_NON_INTERVERSIONED_RPC]*/
 
   /**
    * Get the RPC server.
@@ -145,7 +145,7 @@ public class SecureRPCCommunications<I extends WritableComparable,
       }
     }
 
-    /*if[HADOOP_1]
+    /*if[HADOOP_NON_INTERVERSIONED_RPC]
     Server server = RPC.getServer(this,
       myAddress.getHostName(), myAddress.getPort(),
       numHandlers, false, conf, jobTokenSecretManager);
@@ -155,7 +155,7 @@ public class SecureRPCCommunications<I extends WritableComparable,
     if (conf.getBoolean(hadoopSecurityAuthorization, false)) {
       ServiceAuthorizationManager.refresh(conf, new BspPolicyProvider());
     }
-    else[HADOOP_1]*/
+    else[HADOOP_NON_INTERVERSIONED_RPC]*/
     Server server = RPC.getServer(this,
       myAddress.getHostName(), myAddress.getPort(),
       numHandlers, false, conf);
@@ -166,7 +166,7 @@ public class SecureRPCCommunications<I extends WritableComparable,
       ServiceAuthorizationManager sam = new ServiceAuthorizationManager();
       sam.refresh(conf, new BspPolicyProvider());
     }
-    /*end[HADOOP_1]*/
+    /*end[HADOOP_NON_INTERVERSIONED_RPC]*/
     return server;
   }
 
