@@ -646,7 +646,7 @@ under the License.
               </execution>
             </executions>
             <configuration>
-              <symbols>HADOOP_NON_SECURE</symbols>
+              <symbols>HADOOP_NON_SECURE,HADOOP_1</symbols>
             </configuration>
           </plugin>
 	  <plugin>
