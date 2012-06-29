@@ -22,7 +22,14 @@ import java.io.IOException;
 
 import java.net.InetSocketAddress;
 import java.security.PrivilegedExceptionAction;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.ipc.RPC.Server;
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
 import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
@@ -36,13 +43,12 @@ import org.apache.log4j.Logger;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.hadoop.BspPolicyProvider;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
-import org.apache.hadoop.ipc.RPC;
-import org.apache.hadoop.ipc.RPC.Server;
-import org.apache.hadoop.mapreduce.Mapper;
+
+
+/*if[HADOOP_1]
+else[HADOOP_1]*/
+import org.apache.hadoop.ipc.ProtocolSignature;
+/*end[HADOOP_1]*/
 
 /**
  * Used to implement abstract {@link BasicRPCCommunications} methods.
@@ -93,6 +99,25 @@ public class SecureRPCCommunications<I extends WritableComparable,
     }
     return null;
   }
+
+  /*if[HADOOP_1]
+  else[HADOOP_1]*/
+  /**
+   * Get the Protocol Signature for the given protocol,
+   * client version and method.
+   *
+   * @param protocol Protocol.
+   * @param clientVersion Version of Client.
+   * @param clientMethodsHash Hash of Client methods.
+   * @return ProtocolSignature for input parameters.
+   */
+  public ProtocolSignature getProtocolSignature(
+    String protocol,
+    long clientVersion,
+    int clientMethodsHash) throws IOException {
+    return new ProtocolSignature(VERSION_ID, null);
+  }
+  /*end[HADOOP_1]*/
 
   /**
    * Get the RPC server.

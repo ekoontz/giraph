@@ -476,7 +476,7 @@ under the License.
               </execution>
             </executions>
             <configuration>
-              <symbols>HADOOP_NON_SASL_RPC,HADOOP_NON_INTERVERSIONED_RPC,HADOOP_1</symbols>
+              <symbols>HADOOP_1</symbols>
             </configuration>
           </plugin>
         </plugins>
@@ -518,7 +518,7 @@ under the License.
               </execution>
             </executions>
             <configuration>
-              <symbols>HADOOP_NON_INTERVERSIONED_RPC,HADOOP_1</symbols>
+              <symbols>HADOOP_1</symbols>
             </configuration>
           </plugin>
         </plugins>
@@ -559,7 +559,7 @@ under the License.
               </execution>
             </executions>
             <configuration>
-              <symbols>HADOOP_NON_SECURE,HADOOP_NON_SASL_RPC,HADOOP_NON_INTERVERSIONED_RPC,HADOOP_1</symbols>
+              <symbols>HADOOP_NON_SECURE,HADOOP_1</symbols>
             </configuration>
           </plugin>
           <plugin>
@@ -646,7 +646,7 @@ under the License.
               </execution>
             </executions>
             <configuration>
-              <symbols>HADOOP_NON_SECURE,HADOOP_NON_SASL_RPC</symbols>
+              <symbols>HADOOP_NON_SECURE</symbols>
             </configuration>
           </plugin>
 	  <plugin>
