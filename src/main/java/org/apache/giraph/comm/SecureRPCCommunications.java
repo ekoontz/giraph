@@ -145,7 +145,9 @@ public class SecureRPCCommunications<I extends WritableComparable,
       }
     }
 
-    /*if[HADOOP_NON_INTERVERSIONED_RPC]
+    // TODO: make munge tag more specific: just use HADOOP_1 maybe.
+    /*if[HADOOP_1_AUTHORIZATION]
+    // Hadoop 1-style authorization.
     Server server = RPC.getServer(this,
       myAddress.getHostName(), myAddress.getPort(),
       numHandlers, false, conf, jobTokenSecretManager);
@@ -155,7 +157,8 @@ public class SecureRPCCommunications<I extends WritableComparable,
     if (conf.getBoolean(hadoopSecurityAuthorization, false)) {
       ServiceAuthorizationManager.refresh(conf, new BspPolicyProvider());
     }
-    else[HADOOP_NON_INTERVERSIONED_RPC]*/
+    else[HADOOP_1_AUTHORIZATION]*/
+    // Hadoop 2+-style authorization.
     Server server = RPC.getServer(this,
       myAddress.getHostName(), myAddress.getPort(),
       numHandlers, false, conf);
@@ -166,7 +169,7 @@ public class SecureRPCCommunications<I extends WritableComparable,
       ServiceAuthorizationManager sam = new ServiceAuthorizationManager();
       sam.refresh(conf, new BspPolicyProvider());
     }
-    /*end[HADOOP_NON_INTERVERSIONED_RPC]*/
+    /*end[HADOOP_1_AUTHORIZATION]*/
     return server;
   }
 
