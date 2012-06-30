@@ -654,7 +654,7 @@ under the License.
 	      <systemProperties>
 		<property>
 		  <name>prop.jarLocation</name>
-		  <value>../target/giraph-${project.version}-jar-with-dependencies.jar</value>
+		  <value>${basedir}/target/giraph-${project.version}-jar-with-dependencies.jar</value>
 		</property>
 	      </systemProperties>
 	    </configuration>
