@@ -21,5 +21,50 @@ under the License.
 <!-- This configuration is for Giraph-specific configs that should be set across runs -->
 
 <configuration>
+<!--  <property>
+    <name>giraph.SplitMasterWorker</name>
+    <value>true</value>
+  </property> -->
+  <property>
+    <name>giraph.zkList</name>
+    <value>ec2-184-169-206-71.us-west-1.compute.amazonaws.com:2181</value>
+    <final>true</final>
+  </property>
+<!--  <property>
+    <name>mapreduce.framework.name</name>
+    <value>yarn</value>
+    <final>true</final>
+  </property> -->
+  <property>
+    <name>mapreduce.job.jar</name>
+    <value>/Users/ekoontz/giraph/target/giraph-0.2-SNAPSHOT.jar</value>
+  </property>
+  <property>
+    <name>mapred.job.tracker</name>
+    <value>ec2-184-169-206-71.us-west-1.compute.amazonaws.com:8030</value>
+    <final>true</final>
+  </property>
+  <property>
+    <name>hadoop.security.authentication</name>
+    <value>kerberos</value>
+  </property>
+  <property>
+    <name>hadoop.security.authorization</name>
+    <value>true</value>
+  </property>
+  <property>
+    <name>hadoop.security.auth_to_local</name>
+    <value>RULE:[1:$1]</value>
+  </property>
+<!--  <property>
+    <name>mapreduce.jobtracker.kerberos.principal</name>
+    <value>mapred/@HADOOP.LOCALDOMAIN</value>
+    <final>true</final>
+  </property>
+  <property>
+    <name>mapreduce.tasktracker.kerberos.principal</name>
+    <value>mapred/_HOST@HADOOP.LOCALDOMAIN</value>
+    <final>true</final>
+  </property> -->
 
 </configuration>
