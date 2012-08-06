@@ -123,8 +123,10 @@ public class NettyClient<I extends WritableComparable,
       ChannelFuture connectionFuture = bootstrap.connect(address);
       connectionFuture.getChannel().getConfig().setOption("tcpNoDelay", true);
       connectionFuture.getChannel().getConfig().setOption("keepAlive", true);
-      connectionFuture.getChannel().getConfig().setOption("sendBufferSize", sendBufferSize);
-      connectionFuture.getChannel().getConfig().setOption("receiveBufferSize", receiveBufferSize);
+      connectionFuture.getChannel().getConfig().setOption("sendBufferSize",
+          sendBufferSize);
+      connectionFuture.getChannel().getConfig().setOption("receiveBufferSize",
+          receiveBufferSize);
       addressChannelMap.put(address, connectionFuture.getChannel());
 
       waitingConnectionList.add(connectionFuture);
@@ -138,14 +140,6 @@ public class NettyClient<I extends WritableComparable,
             waitingConnection.getChannel().getRemoteAddress());
       }
     }
-  }
-
-  /**
-   * Returning configuration of the first channel. Throws OutOfBounds if no channels exist in the client's
-   * address => channel map.
-   */
-  public ChannelConfig getChannelConfig() throws ArrayIndexOutOfBoundsException {
-    return ((Channel)addressChannelMap.values().toArray()[0]).getConfig();
   }
 
   /**
@@ -215,4 +209,15 @@ public class NettyClient<I extends WritableComparable,
       }
     }
   }
+
+  /**
+   * Returning configuration of the first channel.
+   * @throws ArrayIndexOutOfBoundsException if no
+   *   channels exist in the client's address => channel map.
+   * @return ChannelConfig for the first channel (if any).
+   */
+  public ChannelConfig getChannelConfig() {
+    return ((Channel) addressChannelMap.values().toArray()[0]).getConfig();
+  }
+
 }
