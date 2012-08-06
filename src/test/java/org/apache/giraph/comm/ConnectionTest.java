@@ -26,6 +26,7 @@ import org.apache.hadoop.mapreduce.Mapper.Context;
 import org.junit.Test;
 
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -44,10 +45,11 @@ public class ConnectionTest {
    */
   @Test
   public void connectSingleClientServer() throws IOException {
+    Configuration conf = new Configuration();
     @SuppressWarnings("rawtypes")
     Context context = mock(Context.class);
+    when(context.getConfiguration()).thenReturn(conf);
 
-    Configuration conf = new Configuration();
     ServerData<IntWritable, IntWritable, IntWritable, IntWritable> serverData =
         new ServerData<IntWritable, IntWritable, IntWritable, IntWritable>
             (SimpleMessageStore.newFactory(
@@ -73,10 +75,10 @@ public class ConnectionTest {
    */
   @Test
   public void connectOneClientToThreeServers() throws IOException {
+    Configuration conf = new Configuration();
     @SuppressWarnings("rawtypes")
     Context context = mock(Context.class);
-
-    Configuration conf = new Configuration();
+    when(context.getConfiguration()).thenReturn(conf);
     ServerData<IntWritable, IntWritable, IntWritable, IntWritable> serverData =
         new ServerData<IntWritable, IntWritable, IntWritable, IntWritable>
             (SimpleMessageStore.newFactory(
