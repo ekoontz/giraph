@@ -156,8 +156,8 @@ public class GiraphJob {
 
   /** Use the RPC communication or netty communication */
   public static final String USE_NETTY = "giraph.useNetty";
-  /** Default is to use RPC, not netty */
-  public static final boolean USE_NETTY_DEFAULT = false;
+  /** Default is to use netty, not RPC */
+  public static final boolean USE_NETTY_DEFAULT = true;
 
   /** Initial port to start using for the RPC communication */
   public static final String RPC_INITIAL_PORT = "giraph.rpcInitialPort";
