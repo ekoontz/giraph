@@ -402,7 +402,7 @@ under the License.
       <plugin>
         <groupId>org.apache.rat</groupId>
         <artifactId>apache-rat-plugin</artifactId>
-        <version>0.7</version>
+        <version>0.8</version>
         <executions>
           <execution>
             <phase>verify</phase>
@@ -425,6 +425,7 @@ under the License.
               <exclude>.gitignore</exclude>
               <exclude>.idea/**</exclude>
               <exclude>*.patch</exclude>
+              <exclude>**/*.iml</exclude>
            </excludes>
         </configuration>
       </plugin>

@@ -156,8 +156,8 @@ public class GiraphJob {
 
   /** Use the RPC communication or netty communication */
   public static final String USE_NETTY = "giraph.useNetty";
-  /** Default is to use RPC, not netty */
-  public static final boolean USE_NETTY_DEFAULT = false;
+  /** Default is to use netty, not RPC */
+  public static final boolean USE_NETTY_DEFAULT = true;
 
   /** Initial port to start using for the RPC communication */
   public static final String RPC_INITIAL_PORT = "giraph.rpcInitialPort";
@@ -182,6 +182,30 @@ public class GiraphJob {
   public static final String RPC_NUM_HANDLERS = "giraph.rpcNumHandlers";
   /** Default maximum number of RPC handlers */
   public static final int RPC_NUM_HANDLERS_DEFAULT = 100;
+
+  /** Client send buffer size */
+  public static final String CLIENT_SEND_BUFFER_SIZE =
+      "giraph.clientSendBufferSize";
+  /** Default client send buffer size of 0.5 MB */
+  public static final int DEFAULT_CLIENT_SEND_BUFFER_SIZE = 512 * 1024;
+
+  /** Client receive buffer size */
+  public static final String CLIENT_RECEIVE_BUFFER_SIZE =
+      "giraph.clientReceiveBufferSize";
+  /** Default client receive buffer size of 32 k */
+  public static final int DEFAULT_CLIENT_RECEIVE_BUFFER_SIZE = 32 * 1024;
+
+  /** Server send buffer size */
+  public static final String SERVER_SEND_BUFFER_SIZE =
+      "giraph.serverSendBufferSize";
+  /** Default server send buffer size of 32 k */
+  public static final int DEFAULT_SERVER_SEND_BUFFER_SIZE = 32 * 1024;
+
+  /** Server receive buffer size */
+  public static final String SERVER_RECEIVE_BUFFER_SIZE =
+      "giraph.serverReceiveBufferSize";
+  /** Default server receive buffer size of 0.5 MB */
+  public static final int DEFAULT_SERVER_RECEIVE_BUFFER_SIZE = 512 * 1024;
 
   /**
    *  Maximum number of vertices per partition before sending.
@@ -208,6 +232,12 @@ public class GiraphJob {
       "giraph.maxMessagesPerFlushPut";
   /** Default number of messages that can be bulk sent during a flush */
   public static final int DEFAULT_MAX_MESSAGES_PER_FLUSH_PUT = 2000;
+
+  /** Number of channels used per server */
+  public static final String CHANNELS_PER_SERVER =
+      "giraph.channelsPerServer";
+  /** Default number of channels used per server of 1 */
+  public static final int DEFAULT_CHANNELS_PER_SERVER = 1;
 
   /** Number of flush threads per peer */
   public static final String MSG_NUM_FLUSH_THREADS =
