@@ -118,7 +118,7 @@ public class NettyClient<I extends WritableComparable,
    *
    * @param addresses Addresses to connect to (if haven't already connected)
    */
-  public void connectAllAdddresses(Collection<InetSocketAddress> addresses) {
+  public void connectAllAddresses(Collection<InetSocketAddress> addresses) {
     List<ChannelFuture> waitingConnectionList =
         new ArrayList<ChannelFuture>();
     for (InetSocketAddress address : addresses) {
