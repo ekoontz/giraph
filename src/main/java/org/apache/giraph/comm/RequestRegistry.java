@@ -30,7 +30,7 @@ public class RequestRegistry {
   private final Map<Type, Class<? extends WritableRequest>> requestMap =
       new EnumMap<Type, Class<? extends WritableRequest>>(Type.class);
   /** If finalized, nothing can be added. */
-  private boolean finalized = false;
+  private boolean shutdown = false;
 
   /**
    * Type of the request
@@ -38,10 +38,17 @@ public class RequestRegistry {
   public enum Type {
     /** Sending vertices request */
     SEND_VERTEX_REQUEST,
-    /** Sending a partition of messages */
+    /** Sending a partition of messages for next superstep */
     SEND_PARTITION_MESSAGES_REQUEST,
+    /**
+     * Sending a partition of messages for current superstep
+     * (used during partition exchange)
+     */
+    SEND_PARTITION_CURRENT_MESSAGES_REQUEST,
     /** Send a partition of mutations */
     SEND_PARTITION_MUTATIONS_REQUEST,
+    /** Sending messages request */
+    SEND_MESSAGES_REQUEST,
   }
 
   /**
@@ -50,9 +57,9 @@ public class RequestRegistry {
    * @param writableRequest Request to be registered.
    */
   public void registerClass(WritableRequest<?, ?, ?, ?> writableRequest) {
-    if (finalized) {
+    if (shutdown) {
       throw new IllegalStateException(
-          "registerClass: Cannot call this after finalization!");
+          "registerClass: Cannot call this after shutting down!");
     }
     if (requestMap.put(writableRequest.getType(),
         writableRequest.getClass()) != null) {
@@ -69,7 +76,7 @@ public class RequestRegistry {
    */
   @SuppressWarnings("rawtypes")
   public Class<? extends WritableRequest> getClass(Type type) {
-    if (!finalized) {
+    if (!shutdown) {
       throw new IllegalStateException(
           "getClass: Illegal to get class before finalized");
     }
@@ -87,7 +94,7 @@ public class RequestRegistry {
   /**
    * No more requests can be registered.
    */
-  public void finalize() {
-    finalized = true;
+  public void shutdown() {
+    shutdown = true;
   }
 }

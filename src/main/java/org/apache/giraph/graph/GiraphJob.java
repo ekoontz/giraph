@@ -61,7 +61,7 @@ public class GiraphJob {
       "giraph.graphPartitionerFactoryClass";
 
   /** Vertex index class */
-  public static final String VERTEX_INDEX_CLASS = "giraph.vertexIndexClass";
+  public static final String VERTEX_ID_CLASS = "giraph.vertexIdClass";
   /** Vertex value class */
   public static final String VERTEX_VALUE_CLASS = "giraph.vertexValueClass";
   /** Edge value class */
@@ -183,14 +183,29 @@ public class GiraphJob {
   /** Default maximum number of RPC handlers */
   public static final int RPC_NUM_HANDLERS_DEFAULT = 100;
 
-  /**
-   *  Maximum number of vertices per partition before sending.
-   *  (input superstep only).
-   */
-  public static final String MAX_VERTICES_PER_PARTITION =
-      "giraph.maxVerticesPerPartition";
-  /** Default maximum number of vertices per partition before sending. */
-  public static final int MAX_VERTICES_PER_PARTITION_DEFAULT = 10000;
+  /** Client send buffer size */
+  public static final String CLIENT_SEND_BUFFER_SIZE =
+      "giraph.clientSendBufferSize";
+  /** Default client send buffer size of 0.5 MB */
+  public static final int DEFAULT_CLIENT_SEND_BUFFER_SIZE = 512 * 1024;
+
+  /** Client receive buffer size */
+  public static final String CLIENT_RECEIVE_BUFFER_SIZE =
+      "giraph.clientReceiveBufferSize";
+  /** Default client receive buffer size of 32 k */
+  public static final int DEFAULT_CLIENT_RECEIVE_BUFFER_SIZE = 32 * 1024;
+
+  /** Server send buffer size */
+  public static final String SERVER_SEND_BUFFER_SIZE =
+      "giraph.serverSendBufferSize";
+  /** Default server send buffer size of 32 k */
+  public static final int DEFAULT_SERVER_SEND_BUFFER_SIZE = 32 * 1024;
+
+  /** Server receive buffer size */
+  public static final String SERVER_RECEIVE_BUFFER_SIZE =
+      "giraph.serverReceiveBufferSize";
+  /** Default server receive buffer size of 0.5 MB */
+  public static final int DEFAULT_SERVER_RECEIVE_BUFFER_SIZE = 512 * 1024;
 
   /** Maximum number of messages per peer before flush */
   public static final String MSG_SIZE = "giraph.msgSize";
@@ -208,6 +223,12 @@ public class GiraphJob {
       "giraph.maxMessagesPerFlushPut";
   /** Default number of messages that can be bulk sent during a flush */
   public static final int DEFAULT_MAX_MESSAGES_PER_FLUSH_PUT = 2000;
+
+  /** Number of channels used per server */
+  public static final String CHANNELS_PER_SERVER =
+      "giraph.channelsPerServer";
+  /** Default number of channels used per server of 1 */
+  public static final int DEFAULT_CHANNELS_PER_SERVER = 1;
 
   /** Number of flush threads per peer */
   public static final String MSG_NUM_FLUSH_THREADS =
@@ -336,6 +357,33 @@ public class GiraphJob {
   public static final String CHECKPOINT_DIRECTORY_DEFAULT =
       "_bsp/_checkpoints/";
 
+  /** Directory in the local file system for out-of-core messages. */
+  public static final String MESSAGES_DIRECTORY = "giraph.messagesDirectory";
+  /**
+   * Default messages directory. Final directory path will also have the
+   * job number for uniqueness
+   */
+  public static final String MESSAGES_DIRECTORY_DEFAULT = "_bsp/_messages/";
+
+  /** Whether or not to use out-of-core messages */
+  public static final String USE_OUT_OF_CORE_MESSAGES =
+      "giraph.useOutOfCoreMessages";
+  /** Default choice about using out-of-core messaging */
+  public static final boolean USE_OUT_OF_CORE_MESSAGES_DEFAULT = false;
+  /**
+   * If using out-of-core messaging, it tells how much messages do we keep
+   * in memory.
+   */
+  public static final String MAX_MESSAGES_IN_MEMORY =
+      "giraph.maxMessagesInMemory";
+  /** Default maximum number of messages in memory. */
+  public static final int MAX_MESSAGES_IN_MEMORY_DEFAULT = 1000000;
+  /** Size of buffer when reading and writing messages out-of-core. */
+  public static final String MESSAGES_BUFFER_SIZE =
+      "giraph.messagesBufferSize";
+  /** Default size of buffer when reading and writing messages out-of-core. */
+  public static final int MESSAGES_BUFFER_SIZE_DEFAULT = 8192;
+
   /** Keep the zookeeper output for debugging? Default is to remove it. */
   public static final String KEEP_ZOOKEEPER_DATA =
       "giraph.keepZooKeeperData";
@@ -451,7 +499,7 @@ public class GiraphJob {
    * @param vertexClass Runs vertex computation
    */
   public final void setVertexClass(Class<?> vertexClass) {
-    getConfiguration().setClass(VERTEX_CLASS, vertexClass, BasicVertex.class);
+    getConfiguration().setClass(VERTEX_CLASS, vertexClass, Vertex.class);
   }
 
   /**

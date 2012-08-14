@@ -18,18 +18,6 @@
 
 package org.apache.giraph;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
-import com.google.common.base.Charsets;
-import com.google.common.collect.Maps;
-import com.google.common.io.Closeables;
-
-import org.apache.giraph.aggregators.DoubleMaxAggregator;
-import org.apache.giraph.aggregators.DoubleMinAggregator;
-import org.apache.giraph.aggregators.LongSumAggregator;
 import org.apache.giraph.examples.GeneratedVertexReader;
 import org.apache.giraph.examples.SimpleCombinerVertex;
 import org.apache.giraph.examples.SimpleFailVertex;
@@ -38,22 +26,25 @@ import org.apache.giraph.examples.SimpleMsgVertex;
 import org.apache.giraph.examples.SimplePageRankVertex;
 import org.apache.giraph.examples.SimplePageRankVertex.SimplePageRankVertexInputFormat;
 import org.apache.giraph.examples.SimpleShortestPathsVertex;
-import org.apache.giraph.lib.JsonLongDoubleFloatDoubleVertexOutputFormat;
 import org.apache.giraph.examples.SimpleSumCombiner;
 import org.apache.giraph.examples.SimpleSuperstepVertex;
 import org.apache.giraph.examples.SimpleSuperstepVertex.SimpleSuperstepVertexInputFormat;
 import org.apache.giraph.examples.SimpleSuperstepVertex.SimpleSuperstepVertexOutputFormat;
-import org.apache.giraph.graph.BasicVertex;
 import org.apache.giraph.graph.BspUtils;
 import org.apache.giraph.graph.GiraphJob;
+import org.apache.giraph.graph.LocalityInfoSorter;
 import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.graph.TextAggregatorWriter;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexInputFormat;
+import org.apache.giraph.zk.ZooKeeperExt;
+import org.apache.giraph.io.JsonLongDoubleFloatDoubleVertexOutputFormat;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
@@ -66,16 +57,31 @@ import org.apache.hadoop.mapreduce.JobContext;
 else[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]*/
 import org.apache.hadoop.mapreduce.task.JobContextImpl;
 /*end[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]*/
+import org.apache.zookeeper.KeeperException;
+import org.junit.Test;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+import com.google.common.base.Charsets;
+import com.google.common.collect.Maps;
+import com.google.common.io.Closeables;
+
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-
-import org.junit.Test;
 
 /**
  * Unit test for many simple BSP applications.
@@ -112,7 +118,7 @@ public class TestBspBasic extends BspCase {
     GraphState<LongWritable, IntWritable, FloatWritable, IntWritable> gs =
         new GraphState<LongWritable, IntWritable,
         FloatWritable, IntWritable>();
-    BasicVertex<LongWritable, IntWritable, FloatWritable, IntWritable> vertex =
+    Vertex<LongWritable, IntWritable, FloatWritable, IntWritable> vertex =
         BspUtils.createVertex(job.getConfiguration());
     vertex.initialize(null, null, null, null);
     System.out.println("testInstantiateVertex: Got vertex " + vertex +
@@ -288,6 +294,46 @@ public class TestBspBasic extends BspCase {
   }
 
   /**
+   * Run a test to see if the LocalityInfoSorter can correctly sort
+   * locality information from a mocked znode of data.
+   * @throws IOException
+   * @throws KeeperException
+   * @throws InterruptedException
+   */
+  @Test
+  public void testLocalityInfoSorter()
+    throws IOException, KeeperException, InterruptedException {
+    final List<String> goodList = new ArrayList<String>();
+    Collections.addAll(goodList, "good", "bad", "ugly");
+    final List<String> testList = new ArrayList<String>();
+    Collections.addAll(testList, "bad", "good", "ugly");
+    final String localHost = "node.LOCAL.com";
+    // build output just as we do to store hostlists in ZNODES
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    DataOutputStream dos = new DataOutputStream(baos);
+    String last = "node.test4.com\tnode.test5.com\tnode.test6.com";
+    Text.writeString(dos, last);
+    byte[] LOCALITY_LAST = baos.toByteArray();
+    baos = new ByteArrayOutputStream();
+    dos = new DataOutputStream(baos);
+    String middle = "node.test1.com\tnode.test2.com\tnode.test3.com";
+    Text.writeString(dos, middle);
+    byte[] LOCALITY_MIDDLE = baos.toByteArray();
+    baos = new ByteArrayOutputStream();
+    dos = new DataOutputStream(baos);
+    String first = "node.testx.com\tnode.LOCAL.com\tnode.testy.com";
+    Text.writeString(dos, first);
+    byte[] LOCALITY_FIRST = baos.toByteArray();
+    ZooKeeperExt zk = mock(ZooKeeperExt.class);
+    when(zk.getData("ugly", false, null)).thenReturn(LOCALITY_LAST);
+    when(zk.getData("bad", false, null)).thenReturn(LOCALITY_MIDDLE);
+    when(zk.getData("good", false, null)).thenReturn(LOCALITY_FIRST);
+    LocalityInfoSorter lis = new LocalityInfoSorter(zk, testList, localHost);
+    final List<String> resultList = lis.getPrioritizedLocalInputSplits();
+    assertEquals(goodList, resultList);
+  }
+
+  /**
    * Run a sample BSP job locally and test PageRank.
    *
    * @throws IOException
@@ -301,6 +347,8 @@ public class TestBspBasic extends BspCase {
         SimplePageRankVertex.class, SimplePageRankVertexInputFormat.class);
     job.setWorkerContextClass(
         SimplePageRankVertex.SimplePageRankVertexWorkerContext.class);
+    job.setMasterComputeClass(
+        SimplePageRankVertex.SimplePageRankVertexMasterCompute.class);
     assertTrue(job.run(true));
     if (!runningInDistributedMode()) {
       double maxPageRank =
@@ -362,6 +410,8 @@ public class TestBspBasic extends BspCase {
         outputPath);
     job.setWorkerContextClass(
         SimplePageRankVertex.SimplePageRankVertexWorkerContext.class);
+    job.setMasterComputeClass(
+        SimplePageRankVertex.SimplePageRankVertexMasterCompute.class);
 
     Configuration conf = job.getConfiguration();
 
@@ -401,23 +451,23 @@ public class TestBspBasic extends BspCase {
             String[] tokens = line.split("\t");
             int superstep = Integer.parseInt(tokens[0].split("=")[1]);
             String value = (tokens[1].split("=")[1]);
-            String aggregatorName = tokens[2];
+            String aggregatorName = (tokens[1].split("=")[0]);
 
-            if (DoubleMinAggregator.class.getName().equals(aggregatorName)) {
+            if ("min".equals(aggregatorName)) {
               minValues.put(superstep, Double.parseDouble(value));
             }
-            if (DoubleMaxAggregator.class.getName().equals(aggregatorName)) {
+            if ("max".equals(aggregatorName)) {
               maxValues.put(superstep, Double.parseDouble(value));
             }
-            if (LongSumAggregator.class.getName().equals(aggregatorName)) {
+            if ("sum".equals(aggregatorName)) {
               vertexCounts.put(superstep, Long.parseLong(value));
             }
           }
 
           int maxSuperstep = SimplePageRankVertex.MAX_SUPERSTEPS;
-          assertEquals(maxSuperstep + 1, minValues.size());
-          assertEquals(maxSuperstep + 1, maxValues.size());
-          assertEquals(maxSuperstep + 1, vertexCounts.size());
+          assertEquals(maxSuperstep + 2, minValues.size());
+          assertEquals(maxSuperstep + 2, maxValues.size());
+          assertEquals(maxSuperstep + 2, vertexCounts.size());
 
           assertEquals(maxPageRank, maxValues.get(maxSuperstep));
           assertEquals(minPageRank, minValues.get(maxSuperstep));
@@ -432,7 +482,7 @@ public class TestBspBasic extends BspCase {
       fs.delete(valuesFile, false);
     }
   }
-  
+
   /**
    * Run a sample BSP job locally and test MasterCompute.
    *

@@ -18,15 +18,6 @@
 
 package org.apache.giraph.comm;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.concurrent.ConcurrentHashMap;
-
 import org.apache.giraph.comm.RequestRegistry.Type;
 import org.apache.giraph.graph.BspUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -36,6 +27,14 @@ import org.apache.log4j.Logger;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 
 /**
  * Send a collection of vertex messages for a partition.
@@ -82,7 +81,7 @@ public class SendPartitionMessagesRequest<I extends WritableComparable,
     int vertexIdMessagesSize = input.readInt();
     vertexIdMessages = Maps.newHashMapWithExpectedSize(vertexIdMessagesSize);
     for (int i = 0; i < vertexIdMessagesSize; ++i) {
-      I vertexId = BspUtils.<I>createVertexIndex(conf);
+      I vertexId = BspUtils.<I>createVertexId(conf);
       vertexId.readFields(input);
       int messageCount = input.readInt();
       List<M> messageList = Lists.newArrayListWithCapacity(messageCount);
@@ -118,21 +117,11 @@ public class SendPartitionMessagesRequest<I extends WritableComparable,
 
   @Override
   public void doRequest(ServerData<I, V, E, M> serverData) {
-    ConcurrentHashMap<I, Collection<M>> transientMessages =
-      serverData.getTransientMessages();
-    for (Entry<I, Collection<M>> entry : vertexIdMessages.entrySet()) {
-      Collection<M> messages = transientMessages.get(entry.getKey());
-      if (messages == null) {
-        final Collection<M> tmpMessages =
-            Lists.newArrayListWithCapacity(entry.getValue().size());
-        messages = transientMessages.putIfAbsent(entry.getKey(), tmpMessages);
-        if (messages == null) {
-          messages = tmpMessages;
-        }
-      }
-      synchronized (messages) {
-        messages.addAll(entry.getValue());
-      }
+    try {
+      serverData.getIncomingMessageStore().addPartitionMessages(
+          vertexIdMessages, partitionId);
+    } catch (IOException e) {
+      throw new RuntimeException("doRequest: Got IOException ", e);
     }
   }
 
@@ -144,5 +133,23 @@ public class SendPartitionMessagesRequest<I extends WritableComparable,
   @Override
   public void setConf(Configuration conf) {
     this.conf = conf;
+  }
+
+  /**
+   * Get id of partition
+   *
+   * @return Partition id
+   */
+  public int getPartitionId() {
+    return partitionId;
+  }
+
+  /**
+   * Get messages
+   *
+   * @return Messages map
+   */
+  public Map<I, Collection<M>> getVertexIdMessages() {
+    return vertexIdMessages;
   }
 }

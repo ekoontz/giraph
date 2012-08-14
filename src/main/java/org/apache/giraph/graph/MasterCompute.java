@@ -40,10 +40,10 @@ import org.apache.hadoop.mapreduce.Mapper;
  * not have to be called.
  */
 @SuppressWarnings("rawtypes")
-public abstract class MasterCompute implements AggregatorUsage, Writable,
+public abstract class MasterCompute implements MasterAggregatorUsage, Writable,
     Configurable {
   /** If true, do not do anymore computation on this vertex. */
-  protected boolean halt = false;
+  private boolean halt = false;
   /** Global graph state **/
   private GraphState graphState;
   /** Configuration */
@@ -76,8 +76,8 @@ public abstract class MasterCompute implements AggregatorUsage, Writable,
    *
    * @return Total number of vertices (-1 if first superstep)
    */
-  public long getNumVertices() {
-    return getGraphState().getNumVertices();
+  public long getTotalNumVertices() {
+    return getGraphState().getTotalNumVertices();
   }
 
   /**
@@ -86,8 +86,8 @@ public abstract class MasterCompute implements AggregatorUsage, Writable,
    *
    * @return Total number of edges (-1 if first superstep)
    */
-  public long getNumEdges() {
-    return getGraphState().getNumEdges();
+  public long getTotalNumEdges() {
+    return getGraphState().getTotalNumEdges();
   }
 
   /**
@@ -135,23 +135,32 @@ public abstract class MasterCompute implements AggregatorUsage, Writable,
   }
 
   @Override
-  public final <A extends Writable> Aggregator<A> registerAggregator(
+  public final <A extends Writable> boolean registerAggregator(
     String name, Class<? extends Aggregator<A>> aggregatorClass)
     throws InstantiationException, IllegalAccessException {
-    return getGraphState().getGraphMapper().getAggregatorUsage().
+    return getGraphState().getGraphMapper().getMasterAggregatorUsage().
         registerAggregator(name, aggregatorClass);
   }
 
   @Override
-  public final Aggregator<? extends Writable> getAggregator(String name) {
-    return getGraphState().getGraphMapper().getAggregatorUsage().
-      getAggregator(name);
+  public final <A extends Writable> boolean registerPersistentAggregator(
+      String name,
+      Class<? extends Aggregator<A>> aggregatorClass) throws
+      InstantiationException, IllegalAccessException {
+    return getGraphState().getGraphMapper().getMasterAggregatorUsage().
+        registerPersistentAggregator(name, aggregatorClass);
   }
 
   @Override
-  public final boolean useAggregator(String name) {
-    return getGraphState().getGraphMapper().getAggregatorUsage().
-      useAggregator(name);
+  public <A extends Writable> A getAggregatedValue(String name) {
+    return getGraphState().getGraphMapper().getMasterAggregatorUsage().
+        <A>getAggregatedValue(name);
+  }
+
+  @Override
+  public <A extends Writable> void setAggregatedValue(String name, A value) {
+    getGraphState().getGraphMapper().getMasterAggregatorUsage().
+        setAggregatedValue(name, value);
   }
 
   @Override

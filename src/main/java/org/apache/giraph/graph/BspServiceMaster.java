@@ -18,12 +18,16 @@
 
 package org.apache.giraph.graph;
 
-import net.iharder.Base64;
 import org.apache.giraph.bsp.ApplicationState;
 import org.apache.giraph.bsp.BspInputFormat;
 import org.apache.giraph.bsp.CentralizedServiceMaster;
 import org.apache.giraph.bsp.SuperstepState;
 import org.apache.giraph.graph.GraphMapper.MapFunctions;
+import org.apache.giraph.graph.partition.MasterGraphPartitioner;
+import org.apache.giraph.graph.partition.PartitionOwner;
+import org.apache.giraph.graph.partition.PartitionStats;
+import org.apache.giraph.graph.partition.PartitionUtils;
+import org.apache.giraph.utils.WritableUtils;
 import org.apache.giraph.zk.BspEvent;
 import org.apache.giraph.zk.PredicateLock;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -44,9 +48,10 @@ import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher.Event.EventType;
 import org.apache.zookeeper.ZooDefs.Ids;
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import net.iharder.Base64;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -54,7 +59,7 @@ import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -62,17 +67,15 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeSet;
 
-import org.apache.giraph.graph.partition.MasterGraphPartitioner;
-import org.apache.giraph.graph.partition.PartitionOwner;
-import org.apache.giraph.graph.partition.PartitionStats;
-import org.apache.giraph.graph.partition.PartitionUtils;
-import org.apache.giraph.utils.WritableUtils;
+import com.google.common.base.Function;
+import com.google.common.collect.Iterables;
 
 /**
- * ZooKeeper-based implementation of {@link CentralizedService}.
+ * ZooKeeper-based implementation of {@link CentralizedServiceMaster}.
  *
  * @param <I> Vertex id
  * @param <V> Vertex data
@@ -121,8 +124,7 @@ public class BspServiceMaster<I extends WritableComparable,
   /** Last finalized checkpoint */
   private long lastCheckpointedSuperstep = -1;
   /** State of the superstep changed */
-  private final BspEvent superstepStateChanged =
-      new PredicateLock();
+  private final BspEvent superstepStateChanged;
   /** Master graph partitioner */
   private final MasterGraphPartitioner<I, V, E, M> masterGraphPartitioner;
   /** All the partition stats from the last superstep */
@@ -132,6 +134,8 @@ public class BspServiceMaster<I extends WritableComparable,
   private AggregatorWriter aggregatorWriter;
   /** Master class */
   private MasterCompute masterCompute;
+  /** Limit locality information added to each InputSplit znode */
+  private final int localityLimit = 5;
 
   /**
    * Constructor for setting up the master.
@@ -147,6 +151,7 @@ public class BspServiceMaster<I extends WritableComparable,
       Mapper<?, ?, ?, ?>.Context context,
       GraphMapper<I, V, E, M> graphMapper) {
     super(serverPortList, sessionMsecTimeout, context, graphMapper);
+    superstepStateChanged = new PredicateLock(context);
     registerBspEvent(superstepStateChanged);
 
     maxWorkers =
@@ -514,13 +519,29 @@ public class BspServiceMaster<I extends WritableComparable,
           "some workers will be not used");
     }
     String inputSplitPath = null;
+    String[] splitLocations;
+    InputSplit inputSplit;
+    StringBuilder locations;
     for (int i = 0; i < splitList.size(); ++i) {
       try {
         ByteArrayOutputStream byteArrayOutputStream =
             new ByteArrayOutputStream();
         DataOutput outputStream =
             new DataOutputStream(byteArrayOutputStream);
-        InputSplit inputSplit = splitList.get(i);
+        inputSplit = splitList.get(i);
+        splitLocations = inputSplit.getLocations();
+        locations = null;
+        if (splitLocations != null) {
+          int splitListLength =
+            Math.min(splitLocations.length, localityLimit);
+          locations = new StringBuilder();
+          for (String location : splitLocations) {
+            locations.append(location)
+              .append(--splitListLength > 0 ? "\t" : "");
+          }
+        }
+        Text.writeString(outputStream,
+            locations == null ? "" : locations.toString());
         Text.writeString(outputStream,
             inputSplit.getClass().getName());
         ((Writable) inputSplit).write(outputStream);
@@ -869,7 +890,7 @@ public class BspServiceMaster<I extends WritableComparable,
 
     for (String hostnameIdPath : hostnameIdPathList) {
       JSONObject workerFinishedInfoObj = null;
-      JSONArray aggregatorArray = null;
+      byte[] aggregatorArray = null;
       try {
         byte [] zkData =
             getZkExt().getData(hostnameIdPath, false, null);
@@ -886,88 +907,56 @@ public class BspServiceMaster<I extends WritableComparable,
             "collectAndProcessAggregatorValues: JSONException", e);
       }
       try {
-        aggregatorArray = workerFinishedInfoObj.getJSONArray(
-            JSONOBJ_AGGREGATOR_VALUE_ARRAY_KEY);
+        aggregatorArray = Base64.decode(workerFinishedInfoObj.getString(
+            JSONOBJ_AGGREGATOR_VALUE_ARRAY_KEY));
       } catch (JSONException e) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("collectAndProcessAggregatorValues: " +
               "No aggregators" + " for " + hostnameIdPath);
         }
         continue;
+      } catch (IOException e) {
+        throw new IllegalStateException(
+            "collectAndProcessAggregatorValues: IOException", e);
       }
-      for (int i = 0; i < aggregatorArray.length(); ++i) {
-        try {
-          if (LOG.isInfoEnabled()) {
-            LOG.info("collectAndProcessAggregatorValues: " +
-                "Getting aggregators from " +
-                aggregatorArray.getJSONObject(i));
-          }
-          String aggregatorName =
-              aggregatorArray.getJSONObject(i).getString(
-                  AGGREGATOR_NAME_KEY);
-          String aggregatorClassName =
-              aggregatorArray.getJSONObject(i).getString(
-                  AGGREGATOR_CLASS_NAME_KEY);
-          @SuppressWarnings("unchecked")
-          Aggregator<Writable> aggregator =
-            (Aggregator<Writable>) getAggregator(aggregatorName);
-          boolean firstTime = false;
+
+      DataInputStream input =
+          new DataInputStream(new ByteArrayInputStream(aggregatorArray));
+      try {
+        while (input.available() > 0) {
+          String aggregatorName = input.readUTF();
+          AggregatorWrapper<Writable> aggregator =
+              getAggregatorMap().get(aggregatorName);
           if (aggregator == null) {
-            @SuppressWarnings("unchecked")
-            Class<? extends Aggregator<Writable>> aggregatorClass =
-              (Class<? extends Aggregator<Writable>>)
-              Class.forName(aggregatorClassName);
-            aggregator = registerAggregator(
-                aggregatorName,
-                aggregatorClass);
-            firstTime = true;
+            throw new IllegalStateException(
+                "collectAndProcessAggregatorValues: " +
+                    "Master received aggregator which isn't registered: " +
+                    aggregatorName);
           }
-          Writable aggregatorValue =
-              aggregator.createAggregatedValue();
-          InputStream input =
-              new ByteArrayInputStream(
-                  Base64.decode(
-                      aggregatorArray.getJSONObject(i).
-                      getString(AGGREGATOR_VALUE_KEY)));
-          aggregatorValue.readFields(new DataInputStream(input));
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("collectAndProcessAggregatorValues: " +
-                "aggregator value size=" + input.available() +
-                " for aggregator=" + aggregatorName +
-                " value=" + aggregatorValue);
-          }
-          if (firstTime) {
-            aggregator.setAggregatedValue(aggregatorValue);
-          } else {
-            aggregator.aggregate(aggregatorValue);
-          }
-        } catch (IOException e) {
-          throw new IllegalStateException(
-              "collectAndProcessAggregatorValues: " +
-                  "IOException when reading aggregator data " +
-                  aggregatorArray, e);
-        } catch (JSONException e) {
-          throw new IllegalStateException(
-              "collectAndProcessAggregatorValues: " +
-                  "JSONException when reading aggregator data " +
-                  aggregatorArray, e);
-        } catch (ClassNotFoundException e) {
-          throw new IllegalStateException(
-              "collectAndProcessAggregatorValues: " +
-                  "ClassNotFoundException when reading aggregator data " +
-                  aggregatorArray, e);
-        } catch (InstantiationException e) {
-          throw new IllegalStateException(
-              "collectAndProcessAggregatorValues: " +
-                  "InstantiationException when reading aggregator data " +
-                  aggregatorArray, e);
-        } catch (IllegalAccessException e) {
-          throw new IllegalStateException(
-              "collectAndProcessAggregatorValues: " +
-                  "IOException when reading aggregator data " +
-                  aggregatorArray, e);
+          Writable aggregatorValue = aggregator.createInitialValue();
+          aggregatorValue.readFields(input);
+          aggregator.aggregateCurrent(aggregatorValue);
         }
+      } catch (IOException e) {
+        throw new IllegalStateException(
+            "collectAndProcessAggregatorValues: " +
+                "IOException when reading aggregator data", e);
       }
+    }
+
+    if (LOG.isInfoEnabled()) {
+      LOG.info("collectAndProcessAggregatorValues: Processed aggregators");
+    }
+
+    // prepare aggregators for master compute
+    for (AggregatorWrapper<Writable> aggregator :
+        getAggregatorMap().values()) {
+      if (aggregator.isPersistent()) {
+        aggregator.aggregateCurrent(aggregator.getPreviousAggregatedValue());
+      }
+      aggregator.setPreviousAggregatedValue(
+          aggregator.getCurrentAggregatedValue());
+      aggregator.resetCurrentAggregator();
     }
   }
 
@@ -977,48 +966,45 @@ public class BspServiceMaster<I extends WritableComparable,
    * @param superstep superstep for which to save values
    */
   private void saveAggregatorValues(long superstep) {
-    Map<String, Aggregator<Writable>> aggregatorMap = getAggregatorMap();
+    Map<String, AggregatorWrapper<Writable>> aggregatorMap =
+        getAggregatorMap();
+
+    for (AggregatorWrapper<Writable> aggregator : aggregatorMap.values()) {
+      if (aggregator.isChanged()) {
+        // if master compute changed the value, use the one he chose
+        aggregator.setPreviousAggregatedValue(
+            aggregator.getCurrentAggregatedValue());
+        // reset aggregator for the next superstep
+        aggregator.resetCurrentAggregator();
+      }
+    }
+
     if (aggregatorMap.size() > 0) {
       String mergedAggregatorPath =
           getMergedAggregatorPath(getApplicationAttempt(), superstep);
-      byte [] zkData = null;
-      JSONArray aggregatorArray = new JSONArray();
-      for (Map.Entry<String, Aggregator<Writable>> entry :
-        aggregatorMap.entrySet()) {
-        try {
-          ByteArrayOutputStream outputStream =
-              new ByteArrayOutputStream();
-          DataOutput output = new DataOutputStream(outputStream);
-          entry.getValue().getAggregatedValue().write(output);
 
-          JSONObject aggregatorObj = new JSONObject();
-          aggregatorObj.put(AGGREGATOR_NAME_KEY,
-              entry.getKey());
-          aggregatorObj.put(
-              AGGREGATOR_VALUE_KEY,
-              Base64.encodeBytes(outputStream.toByteArray()));
-          aggregatorArray.put(aggregatorObj);
-          if (LOG.isInfoEnabled()) {
-            LOG.info("saveAggregatorValues: " +
-                "Trying to add aggregatorObj " +
-                aggregatorObj + "(" +
-                    entry.getValue().getAggregatedValue() +
-                    ") to merged aggregator path " +
-                    mergedAggregatorPath);
-          }
+      ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+      DataOutput output = new DataOutputStream(outputStream);
+      try {
+        output.writeInt(aggregatorMap.size());
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
+      for (Map.Entry<String, AggregatorWrapper<Writable>> entry :
+          aggregatorMap.entrySet()) {
+        try {
+          output.writeUTF(entry.getKey());
+          output.writeUTF(entry.getValue().getAggregatorClass().getName());
+          entry.getValue().getPreviousAggregatedValue().write(output);
         } catch (IOException e) {
-          throw new IllegalStateException(
-              "saveAggregatorValues: " +
-                  "IllegalStateException", e);
-        } catch (JSONException e) {
-          throw new IllegalStateException(
-              "saveAggregatorValues: JSONException", e);
+          throw new IllegalStateException("saveAggregatorValues: " +
+              "IllegalStateException", e);
         }
       }
+
       try {
-        zkData = aggregatorArray.toString().getBytes();
         getZkExt().createExt(mergedAggregatorPath,
-            zkData,
+            outputStream.toByteArray(),
             Ids.OPEN_ACL_UNSAFE,
             CreateMode.PERSISTENT,
             true);
@@ -1034,10 +1020,8 @@ public class BspServiceMaster<I extends WritableComparable,
             e);
       }
       if (LOG.isInfoEnabled()) {
-        LOG.info("saveAggregatorValues: Finished " +
-            "loading " +
-            mergedAggregatorPath + " with aggregator values " +
-            aggregatorArray);
+        LOG.info("saveAggregatorValues: Finished loading " +
+            mergedAggregatorPath);
       }
     }
   }
@@ -1534,7 +1518,20 @@ public class BspServiceMaster<I extends WritableComparable,
       superstepState = SuperstepState.THIS_SUPERSTEP_DONE;
     }
     try {
-      aggregatorWriter.writeAggregator(getAggregatorMap(),
+      Iterable<Map.Entry<String, Writable>> iter =
+          Iterables.transform(
+              getAggregatorMap().entrySet(),
+              new Function<Entry<String, AggregatorWrapper<Writable>>,
+                  Entry<String, Writable>>() {
+                @Override
+                public Entry<String, Writable> apply(
+                    Entry<String, AggregatorWrapper<Writable>> entry) {
+                  return new AbstractMap.SimpleEntry<String,
+                      Writable>(entry.getKey(),
+                      entry.getValue().getPreviousAggregatedValue());
+                }
+              });
+      aggregatorWriter.writeAggregator(iter,
           (superstepState == SuperstepState.ALL_SUPERSTEPS_DONE) ?
               AggregatorWriter.LAST_SUPERSTEP : getSuperstep());
     } catch (IOException e) {
@@ -1556,8 +1553,8 @@ public class BspServiceMaster<I extends WritableComparable,
     // The master.compute() should run logically before the workers, so
     // increase the superstep counter it uses by one
     graphState.setSuperstep(superstep + 1);
-    graphState.setNumVertices(vertexCounter.getValue());
-    graphState.setNumEdges(edgeCounter.getValue());
+    graphState.setTotalNumVertices(vertexCounter.getValue());
+    graphState.setTotalNumEdges(edgeCounter.getValue());
     graphState.setContext(getContext());
     graphState.setGraphMapper(getGraphMapper());
     masterCompute.setGraphState(graphState);
@@ -1787,14 +1784,28 @@ public class BspServiceMaster<I extends WritableComparable,
     return foundEvent;
   }
 
-  /**
-   * Use an aggregator in this superstep. Note that the master uses all
-   * aggregators by default, so calling this function is not neccessary.
-   *
-   * @param name Name of aggregator (should be unique)
-   * @return boolean (always true)
-   */
-  public boolean useAggregator(String name) {
-    return true;
+  @Override
+  public <A extends Writable> boolean registerAggregator(String name,
+      Class<? extends Aggregator<A>> aggregatorClass) throws
+      InstantiationException, IllegalAccessException {
+    return registerAggregator(name, aggregatorClass, false) != null;
+  }
+
+  @Override
+  public <A extends Writable> boolean registerPersistentAggregator(String name,
+      Class<? extends Aggregator<A>> aggregatorClass) throws
+      InstantiationException, IllegalAccessException {
+    return registerAggregator(name, aggregatorClass, true) != null;
+  }
+
+  @Override
+  public <A extends Writable> void setAggregatedValue(String name, A value) {
+    AggregatorWrapper<? extends Writable> aggregator = getAggregator(name);
+    if (aggregator == null) {
+      throw new IllegalStateException(
+          "setAggregatedValue: Tried to set value of aggregator which wasn't" +
+              " registered " + name);
+    }
+    ((AggregatorWrapper<A>) aggregator).setCurrentAggregatedValue(value);
   }
 }

@@ -22,17 +22,17 @@ import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.LongWritable;
 
 import java.io.IOException;
-import java.util.Iterator;
 
 /**
  * Same benchmark code as {@link PageRankBenchmark}, but uses
- * Hashmap-backed Vertex implementation rather than
+ * {@link HashMapVertex} implementation rather than
  * {@link org.apache.giraph.graph.EdgeListVertex}
  */
 public class HashMapVertexPageRankBenchmark extends HashMapVertex<
     LongWritable, DoubleWritable, DoubleWritable, DoubleWritable> {
   @Override
-  public void compute(Iterator<DoubleWritable> msgIterator) throws IOException {
-    PageRankComputation.computePageRank(this, msgIterator);
+  public void compute(Iterable<DoubleWritable> messages) throws
+      IOException {
+    PageRankComputation.computePageRank(this, messages);
   }
 }

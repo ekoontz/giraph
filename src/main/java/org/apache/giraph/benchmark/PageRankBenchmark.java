@@ -26,6 +26,7 @@ import org.apache.commons.cli.PosixParser;
 import org.apache.giraph.graph.BspUtils;
 import org.apache.giraph.graph.EdgeListVertex;
 import org.apache.giraph.graph.GiraphJob;
+import org.apache.giraph.io.PseudoRandomVertexInputFormat;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.LongWritable;
@@ -34,7 +35,6 @@ import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Logger;
 
 import java.io.IOException;
-import java.util.Iterator;
 
 /**
  * Default Pregel-style PageRank computation using a {@link EdgeListVertex}.
@@ -48,8 +48,8 @@ public class PageRankBenchmark extends EdgeListVertex<
   private Configuration conf;
 
   @Override
-  public void compute(Iterator<DoubleWritable> msgIterator) throws IOException {
-    PageRankComputation.computePageRank(this, msgIterator);
+  public void compute(Iterable<DoubleWritable> messages) throws IOException {
+    PageRankComputation.computePageRank(this, messages);
   }
 
   @Override
@@ -86,7 +86,7 @@ public class PageRankBenchmark extends EdgeListVertex<
     options.addOption("c",
         "vertexClass",
         true,
-        "Vertex class (0 for Vertex, 1 for EdgeListVertex)");
+        "Vertex class (0 for HashMapVertex, 1 for EdgeListVertex)");
     HelpFormatter formatter = new HelpFormatter();
     if (args.length == 0) {
       formatter.printHelp(getClass().getName(), options, true);

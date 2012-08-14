@@ -17,20 +17,33 @@
  */
 package org.apache.giraph.graph;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import org.apache.giraph.utils.WritableUtils;
+import org.apache.giraph.graph.partition.PartitionOwner;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.*;
+import org.apache.hadoop.io.DoubleWritable;
+import org.apache.hadoop.io.FloatWritable;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
 import org.junit.Before;
 import org.junit.Test;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
+
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import java.io.IOException;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-
-import static org.junit.Assert.*;
 
 /**
  * Tests {@link EdgeListVertex}.
@@ -48,8 +61,7 @@ public class TestEdgeListVertex {
       EdgeListVertex<IntWritable, FloatWritable, DoubleWritable,
       LongWritable> {
     @Override
-    public void compute(Iterator<LongWritable> msgIterator)
-      throws IOException {
+    public void compute(Iterable<LongWritable> messages) throws IOException {
     }
   }
 
@@ -62,7 +74,7 @@ public class TestEdgeListVertex {
     }
     job.setVertexClass(IFDLEdgeListVertex.class);
     Configuration conf = job.getConfiguration();
-    conf.setClass(GiraphJob.VERTEX_INDEX_CLASS, IntWritable.class,
+    conf.setClass(GiraphJob.VERTEX_ID_CLASS, IntWritable.class,
         WritableComparable.class);
     conf.setClass(GiraphJob.VERTEX_VALUE_CLASS, FloatWritable.class,
         Writable.class);
@@ -87,19 +99,14 @@ public class TestEdgeListVertex {
       edgeMap.put(new IntWritable(i), new DoubleWritable(i * 2.0));
     }
     vertex.initialize(null, null, edgeMap, null);
-    assertEquals(vertex.getNumOutEdges(), 1000);
-    int expectedIndex = 1;
-    for (Iterator<IntWritable> edges = vertex.getOutEdgesIterator();
-         edges.hasNext();) {
-      IntWritable index = edges.next();
-      assertEquals(index.get(), expectedIndex);
-      assertEquals(vertex.getEdgeValue(index).get(),
-          expectedIndex * 2.0d);
-      ++expectedIndex;
+    assertEquals(vertex.getNumEdges(), 1000);
+    for (Edge<IntWritable, DoubleWritable> edge : vertex.getEdges()) {
+      assertEquals(edge.getValue().get(),
+          edge.getTargetVertexId().get() * 2.0d);
     }
     assertEquals(vertex.removeEdge(new IntWritable(500)),
         new DoubleWritable(1000));
-    assertEquals(vertex.getNumOutEdges(), 999);
+    assertEquals(vertex.getNumEdges(), 999);
   }
 
   @Test
@@ -109,12 +116,12 @@ public class TestEdgeListVertex {
       edgeMap.put(new IntWritable(i), new DoubleWritable(i * 3.0));
     }
     vertex.initialize(null, null, edgeMap, null);
-    assertEquals(vertex.getNumOutEdges(), 1000);
+    assertEquals(vertex.getNumEdges(), 1000);
     assertEquals(vertex.getEdgeValue(new IntWritable(600)),
         new DoubleWritable(600 * 3.0));
     assertEquals(vertex.removeEdge(new IntWritable(600)),
         new DoubleWritable(600 * 3.0));
-    assertEquals(vertex.getNumOutEdges(), 999);
+    assertEquals(vertex.getNumEdges(), 999);
     assertEquals(vertex.getEdgeValue(new IntWritable(500)),
         new DoubleWritable(500 * 3.0));
     assertEquals(vertex.getEdgeValue(new IntWritable(700)),
@@ -125,10 +132,10 @@ public class TestEdgeListVertex {
   public void testAddRemoveEdges() {
     Map<IntWritable, DoubleWritable> edgeMap = Maps.newHashMap();
     vertex.initialize(null, null, edgeMap, null);
-    assertEquals(vertex.getNumOutEdges(), 0);
+    assertEquals(vertex.getNumEdges(), 0);
     assertTrue(vertex.addEdge(new IntWritable(2),
         new DoubleWritable(2.0)));
-    assertEquals(vertex.getNumOutEdges(), 1);
+    assertEquals(vertex.getNumEdges(), 1);
     assertEquals(vertex.getEdgeValue(new IntWritable(2)),
         new DoubleWritable(2.0));
     assertTrue(vertex.addEdge(new IntWritable(4),
@@ -137,25 +144,40 @@ public class TestEdgeListVertex {
         new DoubleWritable(3.0)));
     assertTrue(vertex.addEdge(new IntWritable(1),
         new DoubleWritable(1.0)));
-    assertEquals(vertex.getNumOutEdges(), 4);
+    assertEquals(vertex.getNumEdges(), 4);
     assertNull(vertex.getEdgeValue(new IntWritable(5)));
     assertNull(vertex.getEdgeValue(new IntWritable(0)));
-    int i = 1;
-    for (Iterator<IntWritable> edges = vertex.getOutEdgesIterator();
-        edges.hasNext();) {
-      IntWritable edgeDestId = edges.next();
-      assertEquals(i, edgeDestId.get());
-      assertEquals(i * 1.0d, vertex.getEdgeValue(edgeDestId).get());
-      ++i;
+    for (Edge<IntWritable, DoubleWritable> edge : vertex.getEdges()) {
+      assertEquals(edge.getTargetVertexId().get() * 1.0d, edge.getValue().get());
     }
     assertNotNull(vertex.removeEdge(new IntWritable(1)));
-    assertEquals(vertex.getNumOutEdges(), 3);
+    assertEquals(vertex.getNumEdges(), 3);
     assertNotNull(vertex.removeEdge(new IntWritable(3)));
-    assertEquals(vertex.getNumOutEdges(), 2);
+    assertEquals(vertex.getNumEdges(), 2);
     assertNotNull(vertex.removeEdge(new IntWritable(2)));
-    assertEquals(vertex.getNumOutEdges(), 1);
+    assertEquals(vertex.getNumEdges(), 1);
     assertNotNull(vertex.removeEdge(new IntWritable(4)));
-    assertEquals(vertex.getNumOutEdges(), 0);
+    assertEquals(vertex.getNumEdges(), 0);
+  }
+
+  @Test
+  public void testGiraphTransferRegulator() {
+     job.getConfiguration()
+       .setInt(GiraphTransferRegulator.MAX_VERTICES_PER_TRANSFER, 1);
+     job.getConfiguration()
+       .setInt(GiraphTransferRegulator.MAX_EDGES_PER_TRANSFER, 3);
+     Map<IntWritable, DoubleWritable> edgeMap = Maps.newHashMap();
+     edgeMap.put(new IntWritable(2), new DoubleWritable(22));
+     edgeMap.put(new IntWritable(3), new DoubleWritable(33));
+     edgeMap.put(new IntWritable(4), new DoubleWritable(44));
+     vertex.initialize(null, null, edgeMap, null);
+     GiraphTransferRegulator gtr =
+       new GiraphTransferRegulator(job.getConfiguration());
+     PartitionOwner owner = mock(PartitionOwner.class);
+     when(owner.getPartitionId()).thenReturn(57);
+     assertFalse(gtr.transferThisPartition(owner));
+     gtr.incrementCounters(owner, vertex);
+     assertTrue(gtr.transferThisPartition(owner));
   }
 
   @Test
@@ -174,6 +196,11 @@ public class TestEdgeListVertex {
       BspUtils.<IntWritable, FloatWritable, DoubleWritable, LongWritable>
       createVertex(job.getConfiguration());
     WritableUtils.readFieldsFromByteArray(byteArray, readVertex);
-    assertEquals(vertex, readVertex);
+    assertEquals(vertex.getId(), readVertex.getId());
+    assertEquals(vertex.getValue(), readVertex.getValue());
+    assertEquals(Lists.newArrayList(vertex.getEdges()),
+        Lists.newArrayList(readVertex.getEdges()));
+    assertEquals(Lists.newArrayList(vertex.getMessages()),
+        Lists.newArrayList(readVertex.getMessages()));
   }
 }

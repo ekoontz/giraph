@@ -18,18 +18,12 @@
 
 package org.apache.giraph.comm;
 
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.concurrent.ConcurrentHashMap;
-
 import org.apache.giraph.bsp.CentralizedServiceWorker;
-import org.apache.giraph.graph.BasicVertex;
+import org.apache.giraph.comm.messages.MessageStoreByPartition;
+import org.apache.giraph.comm.messages.SendPartitionCurrentMessagesRequest;
 import org.apache.giraph.graph.Edge;
 import org.apache.giraph.graph.GiraphJob;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexMutations;
 import org.apache.giraph.graph.WorkerInfo;
 import org.apache.giraph.graph.partition.Partition;
@@ -41,6 +35,15 @@ import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.log4j.Logger;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Takes users facing APIs in {@link WorkerClient} and implements them
@@ -83,15 +86,19 @@ public class NettyWorkerClient<I extends WritableComparable,
   private final int maxMutationsPerPartition;
   /** Messages sent during the last superstep */
   private long totalMsgsSentInSuperstep = 0;
+  /** Server data from the server */
+  private final ServerData<I, V, E, M> serverData;
 
   /**
    * Only constructor.
    *
    * @param context Context from mapper
    * @param service Used to get partition mapping
+   * @param serverData Server data (used for local requests)
    */
   public NettyWorkerClient(Mapper<?, ?, ?, ?>.Context context,
-                           CentralizedServiceWorker<I, V, E, M> service) {
+                           CentralizedServiceWorker<I, V, E, M> service,
+                           ServerData<I, V, E, M> serverData) {
     this.nettyClient = new NettyClient<I, V, E, M>(context);
     this.conf = context.getConfiguration();
     this.service = service;
@@ -101,6 +108,7 @@ public class NettyWorkerClient<I extends WritableComparable,
         GiraphJob.MAX_MUTATIONS_PER_REQUEST_DEFAULT);
     sendMessageCache = new SendMessageCache<I, M>(conf);
     sendMutationsCache = new SendMutationsCache<I, V, E, M>();
+    this.serverData = serverData;
   }
 
   @Override
@@ -129,7 +137,7 @@ public class NettyWorkerClient<I extends WritableComparable,
       }
       addresses.add(partitionOwner.getWorkerInfo().getHostnamePort());
     }
-    nettyClient.connectAllAdddresses(addresses);
+    nettyClient.connectAllAddresses(addresses);
   }
 
   /**
@@ -164,13 +172,30 @@ public class NettyWorkerClient<I extends WritableComparable,
         partitionOwner.getPartitionId());
   }
 
+  /**
+   * When doing the request, short circuit if it is local
+   *
+   * @param remoteServerAddress Remote server address (checked against local)
+   * @param writableRequest Request to either submit or run locally
+   */
+  private void doRequest(InetSocketAddress remoteServerAddress,
+                         WritableRequest<I, V, E, M> writableRequest) {
+    // If this is local, execute locally
+    if (service.getWorkerInfo().getHostnamePort().equals(
+        remoteServerAddress)) {
+      writableRequest.doRequest(serverData);
+    } else {
+      nettyClient.sendWritableRequest(remoteServerAddress, writableRequest);
+    }
+  }
+
   @Override
-  public void sendMessageReq(I destVertexId, M message) {
+  public void sendMessageRequest(I destVertexId, M message) {
     PartitionOwner partitionOwner =
         service.getVertexPartitionOwner(destVertexId);
     int partitionId = partitionOwner.getPartitionId();
     if (LOG.isDebugEnabled()) {
-      LOG.debug("sendMessageReq: Send bytes (" + message.toString() +
+      LOG.debug("sendMessageRequest: Send bytes (" + message.toString() +
           ") to " + destVertexId + " with partition " + partitionId);
     }
     ++totalMsgsSentInSuperstep;
@@ -185,37 +210,67 @@ public class NettyWorkerClient<I extends WritableComparable,
           getInetSocketAddress(partitionOwner.getWorkerInfo(), partitionId);
       Map<I, Collection<M>> partitionMessages =
           sendMessageCache.removePartitionMessages(partitionId);
-      WritableRequest<I, V, E, M> writableReauest =
+      WritableRequest<I, V, E, M> writableRequest =
           new SendPartitionMessagesRequest<I, V, E, M>(
               partitionId, partitionMessages);
-      nettyClient.sendWritableRequest(remoteServerAddress, writableReauest);
+      doRequest(remoteServerAddress, writableRequest);
     }
   }
 
   @Override
-  public void sendPartitionReq(WorkerInfo workerInfo,
-      Partition<I, V, E, M> partition) {
+  public void sendPartitionRequest(WorkerInfo workerInfo,
+                                   Partition<I, V, E, M> partition) {
     InetSocketAddress remoteServerAddress =
-        getInetSocketAddress(workerInfo, partition.getPartitionId());
+        getInetSocketAddress(workerInfo, partition.getId());
     if (LOG.isDebugEnabled()) {
-      LOG.debug("sendPartitionReq: Sending to " + remoteServerAddress +
+      LOG.debug("sendPartitionRequest: Sending to " + remoteServerAddress +
           " from " + workerInfo + ", with partition " + partition);
     }
 
-    WritableRequest<I, V, E, M> writableReauest =
-        new SendVertexRequest<I, V, E, M>(
-            partition.getPartitionId(), partition.getVertices());
-    nettyClient.sendWritableRequest(remoteServerAddress, writableReauest);
+    int partitionId = partition.getId();
+    WritableRequest<I, V, E, M> vertexRequest =
+        new SendVertexRequest<I, V, E, M>(partitionId,
+            partition.getVertices());
+    doRequest(remoteServerAddress, vertexRequest);
+
+    // messages are stored separately
+    MessageStoreByPartition<I, M> messageStore =
+        service.getServerData().getCurrentMessageStore();
+    Map<I, Collection<M>> map = Maps.newHashMap();
+    int messagesInMap = 0;
+    for (I vertexId :
+        messageStore.getPartitionDestinationVertices(partitionId)) {
+      try {
+        Collection<M> messages = messageStore.getVertexMessages(vertexId);
+        map.put(vertexId, messages);
+        messagesInMap += messages.size();
+      } catch (IOException e) {
+        throw new IllegalStateException(
+            "sendPartitionReq: Got IOException ", e);
+      }
+      if (messagesInMap > maxMessagesPerPartition) {
+        WritableRequest<I, V, E, M> messagesRequest = new
+            SendPartitionCurrentMessagesRequest<I, V, E, M>(partitionId, map);
+        doRequest(remoteServerAddress, messagesRequest);
+        map.clear();
+        messagesInMap = 0;
+      }
+    }
+    if (!map.isEmpty()) {
+      WritableRequest<I, V, E, M> messagesRequest = new
+          SendPartitionCurrentMessagesRequest<I, V, E, M>(partitionId, map);
+      doRequest(remoteServerAddress, messagesRequest);
+    }
   }
 
-  /**
-   * Send a mutations request if the maximum number of mutations per partition
-   * was met.
-   *
-   * @param partitionId Partition id
-   * @param partitionOwner Owner of the partition
-   * @param partitionMutationCount Number of mutations for this partition
-   */
+    /**
+    * Send a mutations request if the maximum number of mutations per partition
+    * was met.
+    *
+    * @param partitionId Partition id
+    * @param partitionOwner Owner of the partition
+    * @param partitionMutationCount Number of mutations for this partition
+    */
   private void sendMutationsRequestIfFull(
       int partitionId, PartitionOwner partitionOwner,
       int partitionMutationCount) {
@@ -225,20 +280,21 @@ public class NettyWorkerClient<I extends WritableComparable,
           getInetSocketAddress(partitionOwner.getWorkerInfo(), partitionId);
       Map<I, VertexMutations<I, V, E, M>> partitionMutations =
           sendMutationsCache.removePartitionMutations(partitionId);
-      WritableRequest<I, V, E, M> writableReauest =
+      WritableRequest<I, V, E, M> writableRequest =
           new SendPartitionMutationsRequest<I, V, E, M>(
               partitionId, partitionMutations);
-      nettyClient.sendWritableRequest(remoteServerAddress, writableReauest);
+      doRequest(remoteServerAddress, writableRequest);
     }
   }
 
   @Override
-  public void addEdgeReq(I vertexIndex, Edge<I, E> edge) throws IOException {
+  public void addEdgeRequest(I vertexIndex, Edge<I, E> edge) throws
+      IOException {
     PartitionOwner partitionOwner =
         service.getVertexPartitionOwner(vertexIndex);
     int partitionId = partitionOwner.getPartitionId();
     if (LOG.isDebugEnabled()) {
-      LOG.debug("addEdgeReq: Sending edge " + edge + " for index " +
+      LOG.debug("addEdgeRequest: Sending edge " + edge + " for index " +
           vertexIndex + " with partition " + partitionId);
     }
 
@@ -251,13 +307,13 @@ public class NettyWorkerClient<I extends WritableComparable,
   }
 
   @Override
-  public void removeEdgeReq(I vertexIndex,
-                            I destinationVertexIndex) throws IOException {
+  public void removeEdgeRequest(I vertexIndex,
+                                I destinationVertexIndex) throws IOException {
     PartitionOwner partitionOwner =
         service.getVertexPartitionOwner(vertexIndex);
     int partitionId = partitionOwner.getPartitionId();
     if (LOG.isDebugEnabled()) {
-      LOG.debug("removeEdgeReq: Removing edge " + destinationVertexIndex +
+      LOG.debug("removeEdgeRequest: Removing edge " + destinationVertexIndex +
           " for index " + vertexIndex + " with partition " + partitionId);
     }
 
@@ -271,12 +327,12 @@ public class NettyWorkerClient<I extends WritableComparable,
   }
 
   @Override
-  public void addVertexReq(BasicVertex<I, V, E, M> vertex) throws IOException {
+  public void addVertexRequest(Vertex<I, V, E, M> vertex) throws IOException {
     PartitionOwner partitionOwner =
-        service.getVertexPartitionOwner(vertex.getVertexId());
+        service.getVertexPartitionOwner(vertex.getId());
     int partitionId = partitionOwner.getPartitionId();
     if (LOG.isDebugEnabled()) {
-      LOG.debug("addVertexReq: Sending vertex " + vertex +
+      LOG.debug("addVertexRequest: Sending vertex " + vertex +
           " to partition " + partitionId);
     }
 
@@ -289,12 +345,12 @@ public class NettyWorkerClient<I extends WritableComparable,
   }
 
   @Override
-  public void removeVertexReq(I vertexIndex) throws IOException {
+  public void removeVertexRequest(I vertexIndex) throws IOException {
     PartitionOwner partitionOwner =
         service.getVertexPartitionOwner(vertexIndex);
     int partitionId = partitionOwner.getPartitionId();
     if (LOG.isDebugEnabled()) {
-      LOG.debug("removeVertexReq: Removing vertex index " + vertexIndex +
+      LOG.debug("removeVertexRequest: Removing vertex index " + vertexIndex +
           " from partition " + partitionId);
     }
 
@@ -313,12 +369,12 @@ public class NettyWorkerClient<I extends WritableComparable,
         sendMessageCache.removeAllPartitionMessages();
     for (Entry<Integer, Map<I, Collection<M>>> entry :
         remainingMessageCache.entrySet()) {
-      WritableRequest<I, V, E, M> writableReauest =
+      WritableRequest<I, V, E, M> writableRequest =
           new SendPartitionMessagesRequest<I, V, E, M>(
               entry.getKey(), entry.getValue());
       InetSocketAddress remoteServerAddress =
           getInetSocketAddress(entry.getValue().keySet().iterator().next());
-      nettyClient.sendWritableRequest(remoteServerAddress, writableReauest);
+      doRequest(remoteServerAddress, writableRequest);
     }
 
     // Execute the remaining sends mutations (if any)
@@ -326,12 +382,12 @@ public class NettyWorkerClient<I extends WritableComparable,
         sendMutationsCache.removeAllPartitionMutations();
     for (Entry<Integer, Map<I, VertexMutations<I, V, E, M>>> entry :
         remainingMutationsCache.entrySet()) {
-      WritableRequest<I, V, E, M> writableReauest =
+      WritableRequest<I, V, E, M> writableRequest =
           new SendPartitionMutationsRequest<I, V, E, M>(
               entry.getKey(), entry.getValue());
       InetSocketAddress remoteServerAddress =
           getInetSocketAddress(entry.getValue().keySet().iterator().next());
-      nettyClient.sendWritableRequest(remoteServerAddress, writableReauest);
+      doRequest(remoteServerAddress, writableRequest);
     }
 
     nettyClient.waitAllRequests();

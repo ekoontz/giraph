@@ -18,13 +18,13 @@
 
 package org.apache.giraph.comm;
 
+import org.apache.giraph.graph.Vertex;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
+
 import java.io.Closeable;
 import java.util.Collection;
 import java.util.Map;
-
-import org.apache.giraph.graph.BasicVertex;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 
 /**
  * Interface for message communication server.
@@ -58,7 +58,14 @@ public interface WorkerServer<I extends WritableComparable,
    *
    * @return map of vertex ranges to vertices
    */
-  Map<Integer, Collection<BasicVertex<I, V, E, M>>> getInPartitionVertexMap();
+  Map<Integer, Collection<Vertex<I, V, E, M>>> getInPartitionVertexMap();
+
+  /**
+   * Get server data
+   *
+   * @return Server data
+   */
+  ServerData<I, V, E, M> getServerData();
 
   /**
    * Shuts down.

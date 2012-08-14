@@ -25,6 +25,7 @@ import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBufferInputStream;
 import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 
@@ -57,15 +58,24 @@ public class ResponseClientHandler extends SimpleChannelUpstreamHandler {
     ChannelBuffer buffer = (ChannelBuffer) event.getMessage();
     ChannelBufferInputStream inputStream = new ChannelBufferInputStream(buffer);
     int response = -1;
-    for (int i = 0; i < buffer.capacity(); ++i) {
+    try {
+      for (int i = 0; i < buffer.capacity(); ++i) {
+        try {
+          response = inputStream.readByte();
+        } catch (IOException e) {
+          throw new IllegalStateException(
+              "messageReceived: Got IOException ", e);
+        }
+        if (response != 0) {
+          throw new IllegalStateException(
+              "messageReceived: Got illegal response " + response);
+        }
+      }
+    } finally {
       try {
-        response = inputStream.readByte();
+        inputStream.close();
       } catch (IOException e) {
         throw new IllegalStateException("messageReceived: Got IOException ", e);
-      }
-      if (response != 0) {
-        throw new IllegalStateException(
-            "messageReceived: Got illegal response " + response);
       }
     }
 
@@ -83,5 +93,12 @@ public class ResponseClientHandler extends SimpleChannelUpstreamHandler {
             currentRequestCount + ", bytes = " + buffer.capacity());
       }
     }
+  }
+
+  @Override
+  public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) {
+    throw new IllegalStateException("exceptionCaught: Channel failed with " +
+        "remote address " + ctx.getChannel().getRemoteAddress() + " with " +
+        "cause " + e.getCause());
   }
 }

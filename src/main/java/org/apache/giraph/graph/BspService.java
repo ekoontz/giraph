@@ -208,37 +208,27 @@ public abstract class BspService<I extends WritableComparable,
   /** Private ZooKeeper instance that implements the service */
   private final ZooKeeperExt zk;
   /** Has the Connection occurred? */
-  private final BspEvent connectedEvent = new PredicateLock();
+  private final BspEvent connectedEvent;
   /** Has worker registration changed (either healthy or unhealthy) */
-  private final BspEvent workerHealthRegistrationChanged =
-      new PredicateLock();
+  private final BspEvent workerHealthRegistrationChanged;
   /** InputSplits are ready for consumption by workers */
-  private final BspEvent inputSplitsAllReadyChanged =
-      new PredicateLock();
+  private final BspEvent inputSplitsAllReadyChanged;
   /** InputSplit reservation or finished notification and synchronization */
-  private final BspEvent inputSplitsStateChanged =
-      new PredicateLock();
+  private final BspEvent inputSplitsStateChanged;
   /** InputSplits are done being processed by workers */
-  private final BspEvent inputSplitsAllDoneChanged =
-      new PredicateLock();
+  private final BspEvent inputSplitsAllDoneChanged;
   /** InputSplit done by a worker finished notification and synchronization */
-  private final BspEvent inputSplitsDoneStateChanged =
-      new PredicateLock();
+  private final BspEvent inputSplitsDoneStateChanged;
   /** Are the partition assignments to workers ready? */
-  private final BspEvent partitionAssignmentsReadyChanged =
-      new PredicateLock();
+  private final BspEvent partitionAssignmentsReadyChanged;
   /** Application attempt changed */
-  private final BspEvent applicationAttemptChanged =
-      new PredicateLock();
+  private final BspEvent applicationAttemptChanged;
   /** Superstep finished synchronization */
-  private final BspEvent superstepFinished =
-      new PredicateLock();
+  private final BspEvent superstepFinished;
   /** Master election changed for any waited on attempt */
-  private final BspEvent masterElectionChildrenChanged =
-      new PredicateLock();
+  private final BspEvent masterElectionChildrenChanged;
   /** Cleaned up directory children changed*/
-  private final BspEvent cleanedUpChildrenChanged =
-      new PredicateLock();
+  private final BspEvent cleanedUpChildrenChanged;
   /** Registered list of BspEvents */
   private final List<BspEvent> registeredBspEvents =
       new ArrayList<BspEvent>();
@@ -269,8 +259,8 @@ public abstract class BspService<I extends WritableComparable,
   /** Checkpoint frequency */
   private final int checkpointFrequency;
   /** Map of aggregators */
-  private Map<String, Aggregator<Writable>> aggregatorMap =
-      new TreeMap<String, Aggregator<Writable>>();
+  private Map<String, AggregatorWrapper<Writable>> aggregatorMap =
+      new TreeMap<String, AggregatorWrapper<Writable>>();
 
   /**
    * Constructor.
@@ -284,6 +274,18 @@ public abstract class BspService<I extends WritableComparable,
       int sessionMsecTimeout,
       Mapper<?, ?, ?, ?>.Context context,
       GraphMapper<I, V, E, M> graphMapper) {
+    this.connectedEvent = new PredicateLock(context);
+    this.workerHealthRegistrationChanged = new PredicateLock(context);
+    this.inputSplitsAllReadyChanged = new PredicateLock(context);
+    this.inputSplitsStateChanged = new PredicateLock(context);
+    this.inputSplitsAllDoneChanged = new PredicateLock(context);
+    this.inputSplitsDoneStateChanged = new PredicateLock(context);
+    this.partitionAssignmentsReadyChanged = new PredicateLock(context);
+    this.applicationAttemptChanged = new PredicateLock(context);
+    this.superstepFinished = new PredicateLock(context);
+    this.masterElectionChildrenChanged = new PredicateLock(context);
+    this.cleanedUpChildrenChanged = new PredicateLock(context);
+
     registerBspEvent(connectedEvent);
     registerBspEvent(workerHealthRegistrationChanged);
     registerBspEvent(inputSplitsAllReadyChanged);
@@ -882,22 +884,23 @@ public abstract class BspService<I extends WritableComparable,
    * @param <A> Aggregator type
    * @param name Name of the aggregator
    * @param aggregatorClass Class of the aggregator
+   * @param persistent False iff aggregator should be reset at the end of
+   *                   every super step
    * @return Aggregator
    * @throws IllegalAccessException
    * @throws InstantiationException
    */
-  public final <A extends Writable> Aggregator<A> registerAggregator(
-    String name,
-    Class<? extends Aggregator<A>> aggregatorClass)
-    throws InstantiationException, IllegalAccessException {
+  protected <A extends Writable> AggregatorWrapper<A> registerAggregator(
+      String name, Class<? extends Aggregator<A>> aggregatorClass,
+      boolean persistent) throws InstantiationException,
+      IllegalAccessException {
     if (aggregatorMap.get(name) != null) {
       return null;
     }
-    Aggregator<A> aggregator =
-        (Aggregator<A>) aggregatorClass.newInstance();
-    @SuppressWarnings("unchecked")
-    Aggregator<Writable> writableAggregator =
-      (Aggregator<Writable>) aggregator;
+    AggregatorWrapper<A> aggregator =
+        new AggregatorWrapper<A>(aggregatorClass, persistent);
+    AggregatorWrapper<Writable> writableAggregator =
+        (AggregatorWrapper<Writable>) aggregator;
     aggregatorMap.put(name, writableAggregator);
     if (LOG.isInfoEnabled()) {
       LOG.info("registerAggregator: registered " + name);
@@ -911,8 +914,24 @@ public abstract class BspService<I extends WritableComparable,
    * @param name Name of aggregator
    * @return Aggregator or null when not registered
    */
-  public final Aggregator<? extends Writable> getAggregator(String name) {
+  protected AggregatorWrapper<? extends Writable> getAggregator(String name) {
     return aggregatorMap.get(name);
+  }
+
+  /**
+   * Get value of an aggregator.
+   *
+   * @param name Name of aggregator
+   * @param <A> Aggregated value
+   * @return Value of the aggregator
+   */
+  public <A extends Writable> A getAggregatedValue(String name) {
+    AggregatorWrapper<? extends Writable> aggregator = getAggregator(name);
+    if (aggregator == null) {
+      return null;
+    } else {
+      return (A) aggregator.getPreviousAggregatedValue();
+    }
   }
 
   /**
@@ -920,7 +939,7 @@ public abstract class BspService<I extends WritableComparable,
    *
    * @return Map of aggregator names to aggregator
    */
-  public Map<String, Aggregator<Writable>> getAggregatorMap() {
+  protected Map<String, AggregatorWrapper<Writable>> getAggregatorMap() {
     return aggregatorMap;
   }
 

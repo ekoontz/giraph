@@ -2,8 +2,104 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
-  GIRAPH-216: NullWritable as VertexData, EdgeData or MessageData should be allowed.
-  (Jan van der Lugt via jghoman)
+  GIRAPH-275: Restore data locality to workers reading InputSplits where possible
+  without querying NameNode, ZooKeeper. (Eli Reisman via jghoman)
+  
+  GIRAPH-258: Check type compatibility before submitting job. 
+  (Eli Reisman via jghoman)
+
+  GIRAPH-218: Consolidate all I/O Format classes under one roof in lib/ directory.
+  (Eli Reisman via jghoman)
+
+  GIRAPH-259: TestBspBasic.testBspPageRank is broken (majakabiljo via apresta)
+
+  GIRAPH-256: Partitioning outgoing graph data during INPUT_SUPERSTEP by # of 
+  vertices results in wide variance in RPC message sizes. (Eli Reisman via jghoman)
+  
+  GIRAPH-290: Add committer information for Alessandro Presta to pom.xml
+  (apresta)
+
+  GIRAPH-286. Remove DISCLAIMER from source tree. (jghoman)
+
+  GIRAPH-287: Add option to limit the number of open requests.
+  (Maja Kabiljo via jghoman)
+
+  GIRAPH-262: Netty optimization to handle requests locally whenever
+  possible. (aching)
+
+  GIRAPH-288: Bandwidth tracking - subset of GIRAPH-262. (aching)
+
+  GIRAPH-289: Add thread and channel pooling to NettyClient and
+  NettyServer. (ekoontz via aching)
+
+  GIRAPH-276: Fix broken tests in pseudo-distributed mode.
+  (Alessandro Presta via jghoman)
+
+  GIRAPH-281: Add options to control Netty's per-channel receive and
+  send buffer sizes (ekoontz via aching).
+
+  GIRAPH-228: SimpleTriangleClosingVertex should not use ArrayWritable
+  for a vertex value. (Eli Reisman via jghoman)
+
+  GIRAPH-209: Include munge version in artifact name. 
+  (Eli Reisman via jghoman)
+  
+  GIRAPH-280: Add IntelliJ-generated *.iml and *.ipr files to Apache
+  Rat's <exclude> list. (ekoontz via aching).
+
+  GIRAPH-45: Improve the way to keep outgoing messages (majakabiljo
+  via aching).
+ 
+  GIRAPH-271: Regression in imports in CommunicationsInterface (netj
+  via aching).
+
+  GIRAPH-267: Jobs can get killed for not reporting status during
+  INPUT SUPERSTEP (netj via aching).
+
+  GIRAPH-266: Average aggregators don't calculate real average
+  (majakabiljo via aching).
+
+  GIRAPH-244: Vertex API redesign (apresta via aching).
+
+  GIRAPH-236: Add FindBugs to maven build (Jan van der Lugt via
+  aching).
+
+  GIRAPH-224: Netty server-side combiner (apresta via aching).
+
+  GIRAPH-251: Allow to access the distributed cache from Vertexes and
+  WorkerContext (Gianmarco De Francisci Morales via aching).
+
+  GIRAPH-261: Rename isQuiet variable. (Gianmarco De Francisci Morales 
+  via jghoman).
+
+  GIRAPH-248: Generic IdentityVertex for IO testing (Sean Choi via
+  aching).
+
+  GIRAPH-222: GIRAPH-222 giraph-formats-contrib needs a README (bfem
+  via aching).
+
+  GIRAPH-257: TestBspBasic.testBspMasterCompute is broken (majakabiljo
+  via aching).
+
+  GIRAPH-81: Create annotations on provided algorithms for cli
+  (majakabiljo via aching).
+
+  GIRAPH-242: HashMapVertex stores neighbor ids twice.
+  (Alessandro Presta via hyunsik)
+
+  GIRAPH-241: Small typos in var names in NettyWorkerClient.java 
+  (Eli Reisman via hyunsik)
+
+  GIRAPH-239: IntIntNullIntVertex doesn't save halted state (apresta
+  via aching)
+
+  GIRAPH-238: BasicVertex should have default Writable implementation
+  (apresta via aching)
+
+  GIRAPH-233: Small errors found by FindBugs (Jan van der Lugt via hyunsik)
+  
+  GIRAPH-216: NullWritable as VertexData, EdgeData or MessageData
+  should be allowed.  (Jan van der Lugt via jghoman)
 
   GIRAPH-221: Make iteration over edges more explicit (apresta via aching).
 
@@ -25,10 +121,11 @@ Release 0.2.0 - unreleased
   GIRAPH-217: Add SimpleTriangleClosingVertex to Giraph examples. 
   (Eli Reisman via jghoman)  
 
-  GIRAPH-219: pom in giraph-formats-contrib should have groupId 'org.apache.giraph'.
-  (Brian Femiano via jghoman)
+  GIRAPH-219: pom in giraph-formats-contrib should have groupId
+  'org.apache.giraph'.  (Brian Femiano via jghoman)
 
-  GIRAPH-215: Update site to use Giraph logo and remove 'incubator' text (ekoontz)
+  GIRAPH-215: Update site to use Giraph logo and remove 'incubator'
+  text (ekoontz)
 
   GIRAPH-205: Move Giraph jar to root level of tar.gz. 
   (Roman Shaposhnik via jghoman)

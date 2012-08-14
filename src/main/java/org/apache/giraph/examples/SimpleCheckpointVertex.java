@@ -24,9 +24,13 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.PosixParser;
 import org.apache.giraph.aggregators.LongSumAggregator;
+import org.apache.giraph.graph.DefaultMasterCompute;
+import org.apache.giraph.graph.Edge;
 import org.apache.giraph.graph.EdgeListVertex;
 import org.apache.giraph.graph.GiraphJob;
 import org.apache.giraph.graph.WorkerContext;
+import org.apache.giraph.io.GeneratedVertexInputFormat;
+import org.apache.giraph.io.IdWithValueTextOutputFormat;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.FloatWritable;
@@ -36,8 +40,6 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Logger;
-
-import java.util.Iterator;
 
 /**
  * An example that simply uses its id, value, and edges to compute new data
@@ -64,19 +66,16 @@ public class SimpleCheckpointVertex extends
   private Configuration conf;
 
   @Override
-  public void compute(Iterator<FloatWritable> msgIterator) {
+  public void compute(Iterable<FloatWritable> messages) {
     SimpleCheckpointVertexWorkerContext workerContext =
         (SimpleCheckpointVertexWorkerContext) getWorkerContext();
-
-    LongSumAggregator sumAggregator = (LongSumAggregator)
-        getAggregator(LongSumAggregator.class.getName());
 
     boolean enableFault = workerContext.getEnableFault();
     int supersteps = workerContext.getSupersteps();
 
     if (enableFault && (getSuperstep() == FAULTING_SUPERSTEP) &&
         (getContext().getTaskAttemptID().getId() == 0) &&
-        (getVertexId().get() == FAULTING_VERTEX_ID)) {
+        (getId().get() == FAULTING_VERTEX_ID)) {
       LOG.info("compute: Forced a fault on the first " +
           "attempt of superstep " +
           FAULTING_SUPERSTEP + " and vertex id " +
@@ -87,38 +86,37 @@ public class SimpleCheckpointVertex extends
       voteToHalt();
       return;
     }
-    LOG.info("compute: " + sumAggregator);
-    sumAggregator.aggregate(getVertexId().get());
-    LOG.info("compute: sum = " +
-        sumAggregator.getAggregatedValue().get() +
-        " for vertex " + getVertexId());
+    long sumAgg = this.<LongWritable>getAggregatedValue(
+        LongSumAggregator.class.getName()).get();
+    LOG.info("compute: " + sumAgg);
+    aggregate(LongSumAggregator.class.getName(),
+        new LongWritable(getId().get()));
+    LOG.info("compute: sum = " + sumAgg +
+        " for vertex " + getId());
     float msgValue = 0.0f;
-    while (msgIterator.hasNext()) {
-      float curMsgValue = msgIterator.next().get();
+    for (FloatWritable message : messages) {
+      float curMsgValue = message.get();
       msgValue += curMsgValue;
       LOG.info("compute: got msgValue = " + curMsgValue +
-          " for vertex " + getVertexId() +
+          " for vertex " + getId() +
           " on superstep " + getSuperstep());
     }
-    int vertexValue = getVertexValue().get();
-    setVertexValue(new IntWritable(vertexValue + (int) msgValue));
-    LOG.info("compute: vertex " + getVertexId() +
-        " has value " + getVertexValue() +
+    int vertexValue = getValue().get();
+    setValue(new IntWritable(vertexValue + (int) msgValue));
+    LOG.info("compute: vertex " + getId() +
+        " has value " + getValue() +
         " on superstep " + getSuperstep());
-    for (Iterator<LongWritable> edges = getOutEdgesIterator();
-         edges.hasNext();) {
-      LongWritable targetVertexId = edges.next();
-      FloatWritable edgeValue = getEdgeValue(targetVertexId);
-      LOG.info("compute: vertex " + getVertexId() +
-          " sending edgeValue " + edgeValue +
+    for (Edge<LongWritable, FloatWritable> edge : getEdges()) {
+      FloatWritable newEdgeValue = new FloatWritable(edge.getValue().get() +
+          (float) vertexValue);
+      LOG.info("compute: vertex " + getId() +
+          " sending edgeValue " + edge.getValue() +
           " vertexValue " + vertexValue +
-          " total " + (edgeValue.get() +
-              (float) vertexValue) +
-              " to vertex " + targetVertexId +
+          " total " + newEdgeValue +
+              " to vertex " + edge.getTargetVertexId() +
               " on superstep " + getSuperstep());
-      edgeValue.set(edgeValue.get() + (float) vertexValue);
-      addEdge(targetVertexId, edgeValue);
-      sendMsg(targetVertexId, new FloatWritable(edgeValue.get()));
+      addEdge(edge.getTargetVertexId(), newEdgeValue);
+      sendMessage(edge.getTargetVertexId(), newEdgeValue);
     }
   }
 
@@ -143,11 +141,6 @@ public class SimpleCheckpointVertex extends
     @Override
     public void preApplication()
       throws InstantiationException, IllegalAccessException {
-      registerAggregator(LongSumAggregator.class.getName(),
-          LongSumAggregator.class);
-      LongSumAggregator sumAggregator = (LongSumAggregator)
-          getAggregator(LongSumAggregator.class.getName());
-      sumAggregator.setAggregatedValue(0);
       supersteps = getContext().getConfiguration()
           .getInt(SUPERSTEP_COUNT, supersteps);
       enableFault = getContext().getConfiguration()
@@ -156,15 +149,13 @@ public class SimpleCheckpointVertex extends
 
     @Override
     public void postApplication() {
-      LongSumAggregator sumAggregator = (LongSumAggregator)
-          getAggregator(LongSumAggregator.class.getName());
-      FINAL_SUM = sumAggregator.getAggregatedValue().get();
+      FINAL_SUM = this.<LongWritable>getAggregatedValue(
+          LongSumAggregator.class.getName()).get();
       LOG.info("FINAL_SUM=" + FINAL_SUM);
     }
 
     @Override
     public void preSuperstep() {
-      useAggregator(LongSumAggregator.class.getName());
     }
 
     @Override
@@ -223,8 +214,9 @@ public class SimpleCheckpointVertex extends
     GiraphJob bspJob = new GiraphJob(getConf(), getClass().getName());
     bspJob.setVertexClass(getClass());
     bspJob.setVertexInputFormatClass(GeneratedVertexInputFormat.class);
-    bspJob.setVertexOutputFormatClass(SimpleTextVertexOutputFormat.class);
+    bspJob.setVertexOutputFormatClass(IdWithValueTextOutputFormat.class);
     bspJob.setWorkerContextClass(SimpleCheckpointVertexWorkerContext.class);
+    bspJob.setMasterComputeClass(SimpleCheckpointVertexMasterCompute.class);
     int minWorkers = Integer.parseInt(cmd.getOptionValue('w'));
     int maxWorkers = Integer.parseInt(cmd.getOptionValue('w'));
     bspJob.setWorkerConfiguration(minWorkers, maxWorkers, 100.0f);
@@ -243,6 +235,20 @@ public class SimpleCheckpointVertex extends
       return 0;
     } else {
       return -1;
+    }
+  }
+
+  /**
+   * Master compute associated with {@link SimpleCheckpointVertex}.
+   * It registers required aggregators.
+   */
+  public static class SimpleCheckpointVertexMasterCompute extends
+      DefaultMasterCompute {
+    @Override
+    public void initialize() throws InstantiationException,
+        IllegalAccessException {
+      registerAggregator(LongSumAggregator.class.getName(),
+          LongSumAggregator.class);
     }
   }
 

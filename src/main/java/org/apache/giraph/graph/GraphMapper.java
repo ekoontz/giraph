@@ -18,15 +18,15 @@
 
 package org.apache.giraph.graph;
 
-import com.google.common.collect.Iterables;
-
 import org.apache.giraph.bsp.CentralizedServiceMaster;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
+import org.apache.giraph.comm.messages.MessageStoreByPartition;
 import org.apache.giraph.graph.partition.Partition;
 import org.apache.giraph.graph.partition.PartitionOwner;
 import org.apache.giraph.graph.partition.PartitionStats;
 import org.apache.giraph.utils.MemoryUtils;
 import org.apache.giraph.utils.ReflectionUtils;
+import org.apache.giraph.utils.TimedLogger;
 import org.apache.giraph.zk.ZooKeeperManager;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.filecache.DistributedCache;
@@ -36,6 +36,8 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.log4j.Logger;
 
+import com.google.common.collect.Iterables;
+
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.net.URL;
@@ -43,7 +45,6 @@ import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Enumeration;
-import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -110,19 +111,21 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
   }
 
   /**
-   * Get the aggregator usage, a subset of the functionality
+   * Get worker aggregator usage, a subset of the functionality
    *
-   * @return Aggregator usage interface
+   * @return Worker aggregator usage interface
    */
-  public final AggregatorUsage getAggregatorUsage() {
-    AggregatorUsage result = null;
-    if (serviceWorker != null) {
-      result = serviceWorker;
-    }
-    if (serviceMaster != null) {
-      result = serviceMaster;
-    }
-    return result;
+  public final WorkerAggregatorUsage getWorkerAggregatorUsage() {
+    return serviceWorker;
+  }
+
+  /**
+   * Get master aggregator usage, a subset of the functionality
+   *
+   * @return Master aggregator usage interface
+   */
+  public final MasterAggregatorUsage getMasterAggregatorUsage() {
+    return serviceMaster;
   }
 
   public final WorkerContext getWorkerContext() {
@@ -147,13 +150,41 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
   }
 
   /**
-   * Copied from JobConf to get the location of this jar.  Workaround for
-   * things like Oozie map-reduce jobs.
-   *
-   * @param myClass Class to search the class loader path for to locate
-   *        the relevant jar file
-   * @return Location of the jar file containing myClass
+   * Set the concrete, user-defined choices about generic methods
+   * (validated earlier in GiraphRunner) into the Configuration.
+   * @param conf the Configuration object for this job run.
    */
+  public void determineClassTypes(Configuration conf) {
+    Class<? extends Vertex<I, V, E, M>> vertexClass =
+      BspUtils.<I, V, E, M>getVertexClass(conf);
+    List<Class<?>> classList = ReflectionUtils.<Vertex>getTypeArguments(
+      Vertex.class, vertexClass);
+    Type vertexIndexType = classList.get(0);
+    Type vertexValueType = classList.get(1);
+    Type edgeValueType = classList.get(2);
+    Type messageValueType = classList.get(3);
+    conf.setClass(GiraphJob.VERTEX_ID_CLASS,
+      (Class<?>) vertexIndexType,
+      WritableComparable.class);
+    conf.setClass(GiraphJob.VERTEX_VALUE_CLASS,
+      (Class<?>) vertexValueType,
+      Writable.class);
+    conf.setClass(GiraphJob.EDGE_VALUE_CLASS,
+      (Class<?>) edgeValueType,
+      Writable.class);
+    conf.setClass(GiraphJob.MESSAGE_VALUE_CLASS,
+      (Class<?>) messageValueType,
+      Writable.class);
+  }
+
+    /**
+    * Copied from JobConf to get the location of this jar.  Workaround for
+    * things like Oozie map-reduce jobs.
+    *
+    * @param myClass Class to search the class loader path for to locate
+    *        the relevant jar file
+    * @return Location of the jar file containing myClass
+    */
   private static String findContainingJar(Class<?> myClass) {
     ClassLoader loader = myClass.getClassLoader();
     String classFile =
@@ -175,152 +206,6 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
       throw new RuntimeException(e);
     }
     return null;
-  }
-
-  /**
-   * Make sure that all registered classes have matching types.  This
-   * is a little tricky due to type erasure, cannot simply get them from
-   * the class type arguments.  Also, set the vertex index, vertex value,
-   * edge value and message value classes.
-   *
-   * @param conf Configuration to get the various classes
-   */
-  public void determineClassTypes(Configuration conf) {
-    Class<? extends BasicVertex<I, V, E, M>> vertexClass =
-        BspUtils.<I, V, E, M>getVertexClass(conf);
-    List<Class<?>> classList = ReflectionUtils.<BasicVertex>getTypeArguments(
-        BasicVertex.class, vertexClass);
-    Type vertexIndexType = classList.get(0);
-    Type vertexValueType = classList.get(1);
-    Type edgeValueType = classList.get(2);
-    Type messageValueType = classList.get(3);
-
-    Class<? extends VertexInputFormat<I, V, E, M>> vertexInputFormatClass =
-        BspUtils.<I, V, E, M>getVertexInputFormatClass(conf);
-    classList = ReflectionUtils.<VertexInputFormat>getTypeArguments(
-        VertexInputFormat.class, vertexInputFormatClass);
-    if (classList.get(0) == null) {
-      LOG.warn("Input format vertex index type is not known");
-    } else if (!vertexIndexType.equals(classList.get(0))) {
-      throw new IllegalArgumentException(
-          "checkClassTypes: Vertex index types don't match, " +
-              "vertex - " + vertexIndexType +
-              ", vertex input format - " + classList.get(0));
-    }
-    if (classList.get(1) == null) {
-      LOG.warn("Input format vertex value type is not known");
-    } else if (!vertexValueType.equals(classList.get(1))) {
-      throw new IllegalArgumentException(
-          "checkClassTypes: Vertex value types don't match, " +
-              "vertex - " + vertexValueType +
-              ", vertex input format - " + classList.get(1));
-    }
-    if (classList.get(2) == null) {
-      LOG.warn("Input format edge value type is not known");
-    } else if (!edgeValueType.equals(classList.get(2))) {
-      throw new IllegalArgumentException(
-          "checkClassTypes: Edge value types don't match, " +
-              "vertex - " + edgeValueType +
-              ", vertex input format - " + classList.get(2));
-    }
-    // If has vertex combiner class, check
-    Class<? extends VertexCombiner<I, M>> vertexCombinerClass =
-        BspUtils.<I, M>getVertexCombinerClass(conf);
-    if (vertexCombinerClass != null) {
-      classList = ReflectionUtils.<VertexCombiner>getTypeArguments(
-          VertexCombiner.class, vertexCombinerClass);
-      if (!vertexIndexType.equals(classList.get(0))) {
-        throw new IllegalArgumentException(
-            "checkClassTypes: Vertex index types don't match, " +
-                "vertex - " + vertexIndexType +
-                ", vertex combiner - " + classList.get(0));
-      }
-      if (!messageValueType.equals(classList.get(1))) {
-        throw new IllegalArgumentException(
-            "checkClassTypes: Message value types don't match, " +
-                "vertex - " + vertexValueType +
-                ", vertex combiner - " + classList.get(1));
-      }
-    }
-    // If has vertex output format class, check
-    Class<? extends VertexOutputFormat<I, V, E>>
-    vertexOutputFormatClass =
-      BspUtils.<I, V, E>getVertexOutputFormatClass(conf);
-    if (vertexOutputFormatClass != null) {
-      classList =
-          ReflectionUtils.<VertexOutputFormat>getTypeArguments(
-              VertexOutputFormat.class, vertexOutputFormatClass);
-      if (classList.get(0) == null) {
-        LOG.warn("Output format vertex index type is not known");
-      } else if (!vertexIndexType.equals(classList.get(0))) {
-        throw new IllegalArgumentException(
-            "checkClassTypes: Vertex index types don't match, " +
-                "vertex - " + vertexIndexType +
-                ", vertex output format - " + classList.get(0));
-      }
-      if (classList.get(1) == null) {
-        LOG.warn("Output format vertex value type is not known");
-      } else if (!vertexValueType.equals(classList.get(1))) {
-        throw new IllegalArgumentException(
-            "checkClassTypes: Vertex value types don't match, " +
-                "vertex - " + vertexValueType +
-                ", vertex output format - " + classList.get(1));
-      }
-      if (classList.get(2) == null) {
-        LOG.warn("Output format edge value type is not known");
-      } else if (!edgeValueType.equals(classList.get(2))) {
-        throw new IllegalArgumentException(
-            "checkClassTypes: Edge value types don't match, " +
-                "vertex - " + vertexIndexType +
-                ", vertex output format - " + classList.get(2));
-      }
-    }
-    // Vertex resolver might never select the types
-    Class<? extends VertexResolver<I, V, E, M>>
-    vertexResolverClass =
-      BspUtils.<I, V, E, M>getVertexResolverClass(conf);
-    classList = ReflectionUtils.<VertexResolver>getTypeArguments(
-        VertexResolver.class, vertexResolverClass);
-    if (classList.get(0) != null &&
-        !vertexIndexType.equals(classList.get(0))) {
-      throw new IllegalArgumentException(
-          "checkClassTypes: Vertex index types don't match, " +
-              "vertex - " + vertexIndexType +
-              ", vertex resolver - " + classList.get(0));
-    }
-    if (classList.get(1) != null &&
-        !vertexValueType.equals(classList.get(1))) {
-      throw new IllegalArgumentException(
-          "checkClassTypes: Vertex value types don't match, " +
-              "vertex - " + vertexValueType +
-              ", vertex resolver - " + classList.get(1));
-    }
-    if (classList.get(2) != null &&
-        !edgeValueType.equals(classList.get(2))) {
-      throw new IllegalArgumentException(
-          "checkClassTypes: Edge value types don't match, " +
-              "vertex - " + edgeValueType +
-              ", vertex resolver - " + classList.get(2));
-    }
-    if (classList.get(3) != null &&
-        !messageValueType.equals(classList.get(3))) {
-      throw new IllegalArgumentException(
-          "checkClassTypes: Message value types don't match, " +
-              "vertex - " + edgeValueType +
-              ", vertex resolver - " + classList.get(3));
-    }
-    conf.setClass(GiraphJob.VERTEX_INDEX_CLASS,
-        (Class<?>) vertexIndexType,
-        WritableComparable.class);
-    conf.setClass(GiraphJob.VERTEX_VALUE_CLASS,
-        (Class<?>) vertexValueType,
-        Writable.class);
-    conf.setClass(GiraphJob.EDGE_VALUE_CLASS,
-        (Class<?>) edgeValueType,
-        Writable.class);
-    conf.setClass(GiraphJob.MESSAGE_VALUE_CLASS,
-        (Class<?>) messageValueType,
-        Writable.class);
   }
 
   /**
@@ -388,7 +273,7 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
       conf.set("mapreduce.job.credentials.binary",
           System.getenv("HADOOP_TOKEN_FILE_LOCATION"));
     }
-    // Ensure the user classes have matching types and figure them out
+    // set pre-validated generic parameter types into Configuration
     determineClassTypes(conf);
 
     // Do some initial setup (possibly starting up a Zookeeper service)
@@ -506,7 +391,7 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
     if (done) {
       return;
     }
-    if ((serviceWorker != null) && (graphState.getNumVertices() == 0)) {
+    if ((serviceWorker != null) && (graphState.getTotalNumVertices() == 0)) {
       return;
     }
 
@@ -581,34 +466,64 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
       serviceWorker.getWorkerContext().preSuperstep();
       context.progress();
 
+      boolean useNetty = conf.getBoolean(GiraphJob.USE_NETTY,
+          GiraphJob.USE_NETTY_DEFAULT);
+      MessageStoreByPartition<I, M> messageStore = null;
+      if (useNetty) {
+        messageStore = serviceWorker.getServerData().getCurrentMessageStore();
+      }
+
       partitionStatsList.clear();
+      TimedLogger partitionLogger = new TimedLogger(15000, LOG);
+      int completedPartitions = 0;
       for (Partition<I, V, E, M> partition :
         serviceWorker.getPartitionMap().values()) {
         PartitionStats partitionStats =
-            new PartitionStats(partition.getPartitionId(), 0, 0, 0);
-        for (BasicVertex<I, V, E, M> basicVertex :
+            new PartitionStats(partition.getId(), 0, 0, 0);
+        for (Vertex<I, V, E, M> vertex :
           partition.getVertices()) {
           // Make sure every vertex has the current
           // graphState before computing
-          basicVertex.setGraphState(graphState);
-          if (basicVertex.isHalted() &
-              !Iterables.isEmpty(basicVertex.getMessages())) {
-            basicVertex.halt = false;
+          vertex.setGraphState(graphState);
+
+          Collection<M> messages = null;
+          if (useNetty) {
+            messages = messageStore.getVertexMessages(vertex.getId());
+            messageStore.clearVertexMessages(vertex.getId());
           }
-          if (!basicVertex.isHalted()) {
-            Iterator<M> vertexMsgIt =
-                basicVertex.getMessages().iterator();
+
+          boolean hasMessages = (messages != null && !messages.isEmpty()) ||
+              !Iterables.isEmpty(vertex.getMessages());
+          if (vertex.isHalted() && hasMessages) {
+            vertex.wakeUp();
+          }
+          if (!vertex.isHalted()) {
+            Iterable<M> vertexMsgIt;
+            if (messages == null) {
+              vertexMsgIt = vertex.getMessages();
+            } else {
+              vertexMsgIt = messages;
+            }
             context.progress();
-            basicVertex.compute(vertexMsgIt);
-            basicVertex.releaseResources();
+            vertex.compute(vertexMsgIt);
+            vertex.releaseResources();
           }
-          if (basicVertex.isHalted()) {
+          if (vertex.isHalted()) {
             partitionStats.incrFinishedVertexCount();
           }
           partitionStats.incrVertexCount();
-          partitionStats.addEdgeCount(basicVertex.getNumOutEdges());
+          partitionStats.addEdgeCount(vertex.getNumEdges());
         }
+
+        if (useNetty) {
+          messageStore.clearPartition(partition.getId());
+        }
+
         partitionStatsList.add(partitionStats);
+        ++completedPartitions;
+        partitionLogger.info("map: Completed " + completedPartitions + " of " +
+            serviceWorker.getPartitionMap().size() + " partitions " +
+            MemoryUtils.getRuntimeMemoryStats());
       }
     } while (!serviceWorker.finishSuperstep(partitionStatsList));
     if (LOG.isInfoEnabled()) {

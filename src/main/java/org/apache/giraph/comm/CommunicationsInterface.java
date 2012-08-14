@@ -18,10 +18,7 @@
 
 package org.apache.giraph.comm;
 
-import java.io.IOException;
-
-import org.apache.giraph.graph.Edge;
-import org.apache.giraph.graph.BasicVertex;
+import org.apache.giraph.graph.Vertex;
 /*if[HADOOP_NON_SECURE]
  else[HADOOP_NON_SECURE]*/
 import org.apache.giraph.hadoop.BspTokenSelector;
@@ -30,6 +27,9 @@ import org.apache.hadoop.security.token.TokenInfo;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.ipc.VersionedProtocol;
+
+import java.io.IOException;
+
 
 /**
  * Basic interface for communication between workers.
@@ -93,11 +93,13 @@ public interface CommunicationsInterface<I extends WritableComparable,
   /**
    * Add an edge to a remote vertex
    *
-   * @param vertexIndex Vertex index where the edge is added
-   * @param edge Edge to be added
+   * @param sourceVertexId Source vertex id
+   * @param targetVertexId Target vertex id
+   * @param edgeValue Edge value
    * @throws IOException
    */
-  void addEdge(I vertexIndex, Edge<I, E> edge) throws IOException;
+  void addEdge(I sourceVertexId, I targetVertexId,
+               E edgeValue) throws IOException;
 
   /**
    * Remove an edge on a remote vertex
@@ -114,7 +116,7 @@ public interface CommunicationsInterface<I extends WritableComparable,
    * @param vertex Vertex that will be added
    * @throws IOException
    */
-  void addVertex(BasicVertex<I, V, E, M> vertex) throws IOException;
+  void addVertex(Vertex<I, V, E, M> vertex) throws IOException;
 
   /**
    * Removed a remote vertex

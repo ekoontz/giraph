@@ -26,6 +26,7 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.giraph.comm.messages.SendPartitionCurrentMessagesRequest;
 import org.apache.giraph.graph.GiraphJob;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
@@ -58,7 +59,7 @@ public class NettyServer<I extends WritableComparable,
      V extends Writable, E extends Writable,
      M extends Writable> {
   /** Default maximum thread pool size */
-  public static final int DEFAULT_MAXIMUM_THREAD_POOL_SIZE = 64;
+  public static final int DEFAULT_MAXIMUM_THREAD_POOL_SIZE = 32;
   /** Class logger */
   private static final Logger LOG = Logger.getLogger(NettyServer.class);
   /** Configuration */
@@ -81,6 +82,12 @@ public class NettyServer<I extends WritableComparable,
   private final ServerData<I, V, E, M> serverData;
   /** Server bootstrap */
   private ServerBootstrap bootstrap;
+  /** Byte counter for this client */
+  private final ByteCounter byteCounter = new ByteCounter();
+  /** Send buffer size */
+  private final int sendBufferSize;
+  /** Receive buffer size */
+  private final int receiveBufferSize;
 
   /**
    * Constructor for creating the server
@@ -97,7 +104,14 @@ public class NettyServer<I extends WritableComparable,
         new SendPartitionMessagesRequest<I, V, E, M>());
     requestRegistry.registerClass(
         new SendPartitionMutationsRequest<I, V, E, M>());
-    requestRegistry.finalize();
+    requestRegistry.registerClass(
+        new SendPartitionCurrentMessagesRequest<I, V, E, M>());
+    requestRegistry.shutdown();
+
+    sendBufferSize = conf.getInt(GiraphJob.SERVER_SEND_BUFFER_SIZE,
+        GiraphJob.DEFAULT_SERVER_SEND_BUFFER_SIZE);
+    receiveBufferSize = conf.getInt(GiraphJob.SERVER_RECEIVE_BUFFER_SIZE,
+        GiraphJob.DEFAULT_SERVER_RECEIVE_BUFFER_SIZE);
 
     ThreadFactory bossFactory = new ThreadFactoryBuilder()
       .setNameFormat("Giraph Netty Boss #%d")
@@ -112,16 +126,12 @@ public class NettyServer<I extends WritableComparable,
     }
     maximumPoolSize = conf.getInt(GiraphJob.MSG_NUM_FLUSH_THREADS,
                                   DEFAULT_MAXIMUM_THREAD_POOL_SIZE);
-    try {
-      workerThreadPool =
-        (ThreadPoolExecutor) Executors.newCachedThreadPool(workerFactory);
-      workerThreadPool.setMaximumPoolSize(maximumPoolSize);
-    } catch (ClassCastException e) {
-      LOG.warn("Netty worker thread pool is not of type ThreadPoolExecutor", e);
-    }
+    Executors.newCachedThreadPool(workerFactory);
+
     channelFactory = new NioServerSocketChannelFactory(
         Executors.newCachedThreadPool(bossFactory),
-        workerThreadPool);
+        Executors.newCachedThreadPool(workerFactory),
+        maximumPoolSize);
   }
 
   /**
@@ -134,8 +144,9 @@ public class NettyServer<I extends WritableComparable,
       @Override
       public ChannelPipeline getPipeline() throws Exception {
         return Channels.pipeline(
+            byteCounter,
             new LengthFieldBasedFrameDecoder(1024 * 1024 * 1024, 0, 4, 0, 4),
-            new RequestDecoder<I, V, E, M>(conf, requestRegistry),
+            new RequestDecoder<I, V, E, M>(conf, requestRegistry, byteCounter),
             new RequestServerHandler<I, V, E, M>(serverData));
       }
     });
@@ -180,6 +191,9 @@ public class NettyServer<I extends WritableComparable,
         accepted.add(ch);
         tcpNoDelay = ch.getConfig().setOption("tcpNoDelay", true);
         keepAlive = ch.getConfig().setOption("keepAlive", true);
+        ch.getConfig().setOption("sendBufferSize", sendBufferSize);
+        ch.getConfig().setOption("receiveBufferSize", receiveBufferSize);
+
         break;
       } catch (ChannelException e) {
         LOG.warn("start: Likely failed to bind on attempt " +
@@ -199,7 +213,8 @@ public class NettyServer<I extends WritableComparable,
           "communication server: " + myAddress + " with up to " +
           maximumPoolSize + " threads on bind attempt " + bindAttempts +
           " with tcpNoDelay = " + tcpNoDelay + " and keepAlive = " +
-          keepAlive);
+          keepAlive + " sendBufferSize = " + sendBufferSize +
+          " receiveBufferSize = " + receiveBufferSize);
     }
   }
 

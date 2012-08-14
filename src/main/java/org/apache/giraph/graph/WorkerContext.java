@@ -26,7 +26,7 @@ import org.apache.hadoop.mapreduce.Mapper;
  * on a per-worker basis. There's one WorkerContext per worker.
  */
 @SuppressWarnings("rawtypes")
-public abstract class WorkerContext implements AggregatorUsage {
+public abstract class WorkerContext implements WorkerAggregatorUsage {
   /** Global graph state */
   private GraphState graphState;
 
@@ -86,8 +86,8 @@ public abstract class WorkerContext implements AggregatorUsage {
    *
    * @return Total number of vertices (-1 if first superstep)
    */
-  public long getNumVertices() {
-    return graphState.getNumVertices();
+  public long getTotalNumVertices() {
+    return graphState.getTotalNumVertices();
   }
 
   /**
@@ -96,8 +96,8 @@ public abstract class WorkerContext implements AggregatorUsage {
    *
    * @return Total number of edges (-1 if first superstep)
    */
-  public long getNumEdges() {
-    return graphState.getNumEdges();
+  public long getTotalNumEdges() {
+    return graphState.getTotalNumEdges();
   }
 
   /**
@@ -110,23 +110,14 @@ public abstract class WorkerContext implements AggregatorUsage {
   }
 
   @Override
-  public final <A extends Writable> Aggregator<A> registerAggregator(
-    String name,
-    Class<? extends Aggregator<A>> aggregatorClass)
-    throws InstantiationException, IllegalAccessException {
-    return graphState.getGraphMapper().getAggregatorUsage().
-        registerAggregator(name, aggregatorClass);
+  public <A extends Writable> void aggregate(String name, A value) {
+    graphState.getGraphMapper().getWorkerAggregatorUsage().
+        aggregate(name, value);
   }
 
   @Override
-  public final Aggregator<? extends Writable> getAggregator(String name) {
-    return graphState.getGraphMapper().getAggregatorUsage().
-        getAggregator(name);
-  }
-
-  @Override
-  public final boolean useAggregator(String name) {
-    return graphState.getGraphMapper().getAggregatorUsage().
-        useAggregator(name);
+  public <A extends Writable> A getAggregatedValue(String name) {
+    return graphState.getGraphMapper().getWorkerAggregatorUsage().
+        <A>getAggregatedValue(name);
   }
 }
