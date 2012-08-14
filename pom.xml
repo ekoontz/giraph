@@ -730,8 +730,9 @@ under the License.
       </build>
     </profile>
 
-    <!-- Keep future Hadoop versions munge-free: 
-	 Avoid introducing any munge flags on profiles below. -->
+    <!-- Help keep future Hadoop versions munge-free: 
+	 All profiles below are munge-free: avoid introducing any munge
+         flags on any of the following profiles. -->
     <profile>
       <id>hadoop_0.23</id>
        <activation>
