@@ -531,7 +531,7 @@ under the License.
             </executions>
 	    <!-- profile: hadoop_0.20.203 -->
             <configuration>
-              <symbols>HADOOP_NON_INTERVERSIONED_RPC,HADOOP_NON_JOBCONTEXT_IS_INTERFACE,HADOOP_1_AUTHORIZE</symbols>
+              <symbols>HADOOP_NON_INTERVERSIONED_RPC,HADOOP_NON_JOBCONTEXT_IS_INTERFACE</symbols>
             </configuration>
           </plugin>
         </plugins>
@@ -575,7 +575,7 @@ under the License.
             </executions>
 	    <!-- profile: hadoop_1.0 -->
             <configuration>
-              <symbols>HADOOP_NON_INTERVERSIONED_RPC,HADOOP_NON_JOBCONTEXT_IS_INTERFACE,HADOOP_1_AUTHORIZE</symbols>
+              <symbols>HADOOP_NON_INTERVERSIONED_RPC,HADOOP_NON_JOBCONTEXT_IS_INTERFACE</symbols>
             </configuration>
           </plugin>
         </plugins>
