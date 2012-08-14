@@ -1324,7 +1324,7 @@ public abstract class BasicRPCCommunications<I extends WritableComparable,
   @Override
   public ServerData<I, V, E, M> getServerData() {
     throw
-      new IllegalStateException("getServerData: Tried to get ServerData " +
-      "while using RPC");
+      new IllegalStateException("getServerData() called" +
+      "while using Hadoop RPC: should only be used by Netty RPC.");
   }
 }
