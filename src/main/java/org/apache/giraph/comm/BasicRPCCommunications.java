@@ -46,7 +46,6 @@ import java.io.IOException;
 import java.net.BindException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -1324,7 +1323,8 @@ public abstract class BasicRPCCommunications<I extends WritableComparable,
 
   @Override
   public ServerData<I, V, E, M> getServerData() {
-    throw new IllegalStateException(
-    "getServerData: Tried to get ServerData while using RPC");
+    throw
+      new IllegalStateException("getServerData: Tried to get ServerData " +
+      "while using RPC");
   }
 }
