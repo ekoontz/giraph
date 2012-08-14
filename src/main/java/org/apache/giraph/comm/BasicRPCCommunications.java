@@ -18,6 +18,9 @@
 
 package org.apache.giraph.comm;
 
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.graph.BspUtils;
 import org.apache.giraph.graph.Edge;
@@ -33,19 +36,17 @@ import org.apache.giraph.utils.MemoryUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.ipc.ProtocolSignature;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RPC.Server;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.log4j.Logger;
 
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-
 import java.io.IOException;
 import java.net.BindException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -63,7 +64,6 @@ import java.util.concurrent.Future;
 
 /*if[HADOOP_NON_INTERVERSIONED_RPC]
 else[HADOOP_NON_INTERVERSIONED_RPC]*/
-import org.apache.hadoop.ipc.ProtocolSignature;
 /*end[HADOOP_NON_INTERVERSIONED_RPC]*/
 
 /**
@@ -238,7 +238,7 @@ public abstract class BasicRPCCommunications<I extends WritableComparable,
     /**
      * Constructor.
      *
-     * @param peerConnection Connection to send the messsages to.
+     * @param peerConnection Connection to send the messages to.
      * @param context Context of the mapper.
      */
     PeerFlushExecutor(PeerConnection peerConnection,
@@ -1320,5 +1320,11 @@ public abstract class BasicRPCCommunications<I extends WritableComparable,
   public Map<Integer, Collection<Vertex<I, V, E, M>>>
   getInPartitionVertexMap() {
     return inPartitionVertexMap;
+  }
+
+  @Override
+  public ServerData<I, V, E, M> getServerData() {
+    throw new IllegalStateException(
+    "getServerData: Tried to get ServerData while using RPC");
   }
 }
