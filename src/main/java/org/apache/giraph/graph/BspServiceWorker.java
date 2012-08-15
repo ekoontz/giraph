@@ -1222,6 +1222,27 @@ public class BspServiceWorker<I extends WritableComparable,
     }
 
     getFs().createNewFile(validFilePath);
+
+    // Notify master that checkpoint is stored
+    String workerWroteCheckpoint =
+        getWorkerWroteCheckpointPath(getApplicationAttempt(),
+            getSuperstep()) + "/" + getHostnamePartitionId();
+    try {
+      getZkExt().createExt(workerWroteCheckpoint,
+          new byte[0],
+          Ids.OPEN_ACL_UNSAFE,
+          CreateMode.PERSISTENT,
+          true);
+    } catch (KeeperException.NodeExistsException e) {
+      LOG.warn("finishSuperstep: wrote checkpoint worker path " +
+          workerWroteCheckpoint + " already exists!");
+    } catch (KeeperException e) {
+      throw new IllegalStateException("Creating " + workerWroteCheckpoint +
+          " failed with KeeperException", e);
+    } catch (InterruptedException e) {
+      throw new IllegalStateException("Creating " + workerWroteCheckpoint +
+          " failed with InterruptedException", e);
+    }
   }
 
   @Override
@@ -1311,6 +1332,23 @@ public class BspServiceWorker<I extends WritableComparable,
           workerGraphPartitioner.getPartitionOwners().size() +
           " total.");
     }
+
+    // Load global statistics
+    String finalizedCheckpointPath =
+        getCheckpointBasePath(superstep) + CHECKPOINT_FINALIZED_POSTFIX;
+    try {
+      DataInputStream finalizedStream =
+          getFs().open(new Path(finalizedCheckpointPath));
+      GlobalStats globalStats = new GlobalStats();
+      globalStats.readFields(finalizedStream);
+      getGraphMapper().getGraphState().
+          setTotalNumEdges(globalStats.getEdgeCount()).
+          setTotalNumVertices(globalStats.getVertexCount());
+    } catch (IOException e) {
+      throw new IllegalStateException(
+          "loadCheckpoint: Failed to load global statistics", e);
+    }
+
     // Communication service needs to setup the connections prior to
     // processing vertices
     commService.setup();
