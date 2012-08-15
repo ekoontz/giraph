@@ -29,7 +29,6 @@ import org.apache.giraph.comm.SecureRPCCommunications;
 import org.apache.giraph.comm.WorkerServer;
 import org.apache.giraph.comm.ServerData;
 import org.apache.giraph.comm.WorkerClientServer;
-import org.apache.giraph.comm.WorkerServer;
 import org.apache.giraph.graph.partition.Partition;
 import org.apache.giraph.graph.partition.PartitionExchange;
 import org.apache.giraph.graph.partition.PartitionOwner;

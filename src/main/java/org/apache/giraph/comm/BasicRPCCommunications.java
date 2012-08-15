@@ -33,6 +33,10 @@ import org.apache.giraph.utils.MemoryUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+/*if[HADOOP_NON_INTERVERSIONED_RPC]
+else[HADOOP_NON_INTERVERSIONED_RPC]*/
+import org.apache.hadoop.ipc.ProtocolSignature;
+/*end[HADOOP_NON_INTERVERSIONED_RPC]*/
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RPC.Server;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -60,11 +64,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-
-/*if[HADOOP_NON_INTERVERSIONED_RPC]
-else[HADOOP_NON_INTERVERSIONED_RPC]*/
-import org.apache.hadoop.ipc.ProtocolSignature;
-/*end[HADOOP_NON_INTERVERSIONED_RPC]*/
 
 /**
  * Basic RPC communications object that implements the lower level operations
@@ -238,7 +237,7 @@ public abstract class BasicRPCCommunications<I extends WritableComparable,
     /**
      * Constructor.
      *
-     * @param peerConnection Connection to send the messsages to.
+     * @param peerConnection Connection to send the messages to.
      * @param context Context of the mapper.
      */
     PeerFlushExecutor(PeerConnection peerConnection,
@@ -1320,5 +1319,12 @@ public abstract class BasicRPCCommunications<I extends WritableComparable,
   public Map<Integer, Collection<Vertex<I, V, E, M>>>
   getInPartitionVertexMap() {
     return inPartitionVertexMap;
+  }
+
+  @Override
+  public ServerData<I, V, E, M> getServerData() {
+    throw
+      new IllegalStateException("getServerData() called" +
+      "while using Hadoop RPC: should only be used by Netty RPC.");
   }
 }

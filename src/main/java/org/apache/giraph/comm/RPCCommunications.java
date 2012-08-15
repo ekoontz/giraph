@@ -108,10 +108,4 @@ public class RPCCommunications<I extends WritableComparable,
     return (CommunicationsInterface<I, V, E, M>) RPC.getProxy(
       CommunicationsInterface.class, VERSION_ID, addr, config);
   }
-
-  @Override
-  public ServerData<I, V, E, M> getServerData() {
-    throw new IllegalStateException(
-        "getServerData: Tried to get ServerData while using RPC");
-  }
 }
