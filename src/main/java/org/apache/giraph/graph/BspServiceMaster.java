@@ -848,11 +848,11 @@ public class BspServiceMaster<I extends WritableComparable,
                     getConfiguration());
         for (Writable writable : writableList) {
           globalStats.addPartitionStats((PartitionStats) writable);
-          globalStats.addMessageCount(
-              workerFinishedInfoObj.getLong(
-                  JSONOBJ_NUM_MESSAGES_KEY));
           allPartitionStatsList.add((PartitionStats) writable);
         }
+        globalStats.addMessageCount(
+            workerFinishedInfoObj.getLong(
+                JSONOBJ_NUM_MESSAGES_KEY));
       } catch (JSONException e) {
         throw new IllegalStateException(
             "aggregateWorkerStats: JSONException", e);
@@ -1356,9 +1356,9 @@ public class BspServiceMaster<I extends WritableComparable,
         break;
       }
 
-      // Wait for a signal or no more than 60 seconds to progress
+      // Wait for a signal or no more than 30 seconds to progress
       // or else will continue.
-      event.waitMsecs(60 * 1000);
+      event.waitMsecs(30 * 1000);
       event.reset();
       getContext().progress();
 
@@ -1382,6 +1382,40 @@ public class BspServiceMaster<I extends WritableComparable,
     }
 
     return true;
+  }
+
+  /**
+   * Clean up old superstep data from Zookeeper
+   *
+   * @param removeableSuperstep Supersteo to clean up
+   * @throws InterruptedException
+   */
+  private void cleanUpOldSuperstep(long removeableSuperstep) throws
+      InterruptedException {
+    if (!(getConfiguration().getBoolean(
+        GiraphJob.KEEP_ZOOKEEPER_DATA,
+        GiraphJob.KEEP_ZOOKEEPER_DATA_DEFAULT)) &&
+        (removeableSuperstep >= 0)) {
+      String oldSuperstepPath =
+          getSuperstepPath(getApplicationAttempt()) + "/" +
+              removeableSuperstep;
+      try {
+        if (LOG.isInfoEnabled()) {
+          LOG.info("coordinateSuperstep: Cleaning up old Superstep " +
+              oldSuperstepPath);
+        }
+        getZkExt().deleteExt(oldSuperstepPath,
+            -1,
+            true);
+      } catch (KeeperException.NoNodeException e) {
+        LOG.warn("coordinateBarrier: Already cleaned up " +
+            oldSuperstepPath);
+      } catch (KeeperException e) {
+        throw new IllegalStateException(
+            "coordinateSuperstep: KeeperException on " +
+                "finalizing checkpoint", e);
+      }
+    }
   }
 
   @Override
@@ -1438,33 +1472,6 @@ public class BspServiceMaster<I extends WritableComparable,
         throw new IllegalStateException(
             "coordinateSuperstep: IOException on finalizing checkpoint",
             e);
-      }
-    }
-
-    // Clean up the old supersteps (always keep this one)
-    long removeableSuperstep = getSuperstep() - 1;
-    if (!(getConfiguration().getBoolean(
-        GiraphJob.KEEP_ZOOKEEPER_DATA,
-        GiraphJob.KEEP_ZOOKEEPER_DATA_DEFAULT)) &&
-        (removeableSuperstep >= 0)) {
-      String oldSuperstepPath =
-          getSuperstepPath(getApplicationAttempt()) + "/" +
-              removeableSuperstep;
-      try {
-        if (LOG.isInfoEnabled()) {
-          LOG.info("coordinateSuperstep: Cleaning up old Superstep " +
-              oldSuperstepPath);
-        }
-        getZkExt().deleteExt(oldSuperstepPath,
-            -1,
-            true);
-      } catch (KeeperException.NoNodeException e) {
-        LOG.warn("coordinateBarrier: Already cleaned up " +
-            oldSuperstepPath);
-      } catch (KeeperException e) {
-        throw new IllegalStateException(
-            "coordinateSuperstep: KeeperException on " +
-                "finalizing checkpoint", e);
       }
     }
 
@@ -1527,6 +1534,7 @@ public class BspServiceMaster<I extends WritableComparable,
         getZkExt(), superstepFinishedNode, -1, globalStats);
     updateCounters(globalStats);
 
+    cleanUpOldSuperstep(getSuperstep() - 1);
     incrCachedSuperstep();
     // Counter starts at zero, so no need to increment
     if (getSuperstep() > 0) {

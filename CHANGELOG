@@ -3,6 +3,29 @@ Giraph Change Log
 Release 0.2.0 - unreleased
   GIRAPH-278: Website still tries to load incubator logo
 
+  GIRAPH-306: Netty requests should be reliable and implement exactly
+  once semantics. (aching)
+
+  GIRAPH-309: Message count is wrong. (aching via apresta)
+
+  GIRAPH-246: Periodic worker calls to context.progress() will prevent
+  timeout on some Hadoop clusters during barrier waits. (Eli Reisman
+  via aching)
+
+  GIRAPH-295: Additional Example Algorithm to compute Outdegree and
+  Indegree. (Sean Choi via aching)
+
+  GIRAPH-305: Adding an argument to GiraphRunner for Master Compute
+  classes. (Sean Choi via aching)
+
+  GIRAPH-302: Thread safety issue with sending partitions around.
+  (aching via apresta)
+
+  GIRAPH-303: Regression: cleanup phase happens earlier than it
+  should. (majakabiljo via apresta)
+
+  GIRAPH-278: Website still tries to load incubator logo (ekoontz)
+
   GIRAPH-300) Improve netty reliability with retrying failed
   connections, tracking requests, thread-safe hash partitioning
   (aching via apresta).

@@ -211,9 +211,11 @@ public class BspServiceWorker<I extends WritableComparable,
       localitySorter.getPrioritizedLocalInputSplits();
     String reservedInputSplitPath = null;
     Stat reservedStat = null;
+    final Mapper<?, ?, ?, ?>.Context context = getContext();
     while (true) {
       int finishedInputSplits = 0;
       for (int i = 0; i < inputSplitPathList.size(); ++i) {
+        context.progress();
         String tmpInputSplitFinishedPath =
             inputSplitPathList.get(i) + INPUT_SPLIT_FINISHED_NODE;
         reservedStat =
@@ -273,6 +275,7 @@ public class BspServiceWorker<I extends WritableComparable,
       }
       // Wait for either a reservation to go away or a notification that
       // an InputSplit has finished.
+      context.progress();
       getInputSplitsStateChangedEvent().waitMsecs(60 * 1000);
       getInputSplitsStateChangedEvent().reset();
     }
@@ -309,13 +312,13 @@ public class BspServiceWorker<I extends WritableComparable,
     for (Entry<PartitionOwner, Partition<I, V, E, M>> entry :
       inputSplitCache.entrySet()) {
       if (!entry.getValue().getVertices().isEmpty()) {
+        getContext().progress();
         commService.sendPartitionRequest(entry.getKey().getWorkerInfo(),
             entry.getValue());
-        entry.getValue().getVertices().clear();
       }
     }
-    commService.flush();
     inputSplitCache.clear();
+    commService.flush();
 
     return vertexEdgeCount;
   }
@@ -470,13 +473,13 @@ public class BspServiceWorker<I extends WritableComparable,
       if (transferRegulator.transferThisPartition(partitionOwner)) {
         commService.sendPartitionRequest(partitionOwner.getWorkerInfo(),
             partition);
-        partition.getVertices().clear();
+        inputSplitCache.remove(partitionOwner);
       }
       ++totalVerticesLoaded;
       totalEdgesLoaded += readerVertex.getNumEdges();
 
-      // Update status every half a million vertices
-      if ((totalVerticesLoaded % 500000) == 0) {
+      // Update status every 250k vertices
+      if ((totalVerticesLoaded % 250000) == 0) {
         String status = "readVerticesFromInputSplit: Loaded " +
             totalVerticesLoaded + " vertices and " +
             totalEdgesLoaded + " edges " +
@@ -960,6 +963,12 @@ public class BspServiceWorker<I extends WritableComparable,
     //    of this worker
     // 5. Let the master know it is finished.
     // 6. Wait for the master's global stats, and check if done
+
+    getContext().setStatus("Flushing started: " +
+        getGraphMapper().getMapFunctions().toString() +
+        " - Attempt=" + getApplicationAttempt() +
+        ", Superstep=" + getSuperstep());
+
     long workerSentMessages = 0;
     try {
       commService.flush();
@@ -975,7 +984,8 @@ public class BspServiceWorker<I extends WritableComparable,
     }
 
     if (LOG.isInfoEnabled()) {
-      LOG.info("finishSuperstep: Superstep " + getSuperstep() + " " +
+      LOG.info("finishSuperstep: Superstep " + getSuperstep() +
+          ", mesages = " + workerSentMessages + " " +
           MemoryUtils.getRuntimeMemoryStats());
     }
 
