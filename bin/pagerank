@@ -1,0 +1,40 @@
+#TODO: replace with equivalent hadoop application admin tool invocation rather than crudely using jps.
+KILL_PIDS=`jps | grep "MRAppMaster" | awk '{print $1}'`
+
+while [ -n "$KILL_PIDS" ]; do
+
+    echo "killing running applications.."
+    for PID in $KILL_PIDS
+    do
+	#TODO: works for hadoop daemons, but not zookeeper, since last arg of zookeeper command line is 
+	#configuration file not class name.
+	ROLE=`jps | grep "MRAppMaster" | grep $PID | awk '{print $2}'`
+	echo "killing: $PID ($ROLE)"
+	kill $PID
+    done
+
+    sleep 10
+
+    #terminate any stragglers
+    KILL_PIDS=`jps | grep "MRAppMaster" | awk '{print $1}'`
+    for PID in $KILL_PIDS
+    do
+	ROLE=`jps | grep "MRAppMaster" | grep $PID | awk '{print $2}'`
+	echo "terminating straggler: $PID ($ROLE)"
+	kill -9 $PID
+    done
+
+    sleep 3
+    KILL_PIDS=`jps | grep "MRAppMaster" | awk '{print $1}'`
+done
+
+sleep 2
+
+
+HADOOP_RUNTIME=/Users/ekoontz/hadoop-runtime
+echo
+while [ "$?" -eq "0" ] ; do
+#      rm -rf /tmp/logs
+      $HADOOP_RUNTIME/bin/hadoop jar /Users/ekoontz/giraph/target/giraph-0.2-tm6-for-hadoop-2.1.0.tm6-jar-with-dependencies.jar \
+         org.apache.giraph.benchmark.PageRankBenchmark  -Dgiraph.useNetty=true -e 1 -s 20 -v -V 10 -w 4
+done

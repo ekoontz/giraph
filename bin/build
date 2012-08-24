@@ -1,0 +1,6 @@
+export HADOOP_VERSION=2.1.0.tm6
+export ZOOKEEPER_VERSION=3.4.3.tm6
+rm ./target/giraph-0.2-tm6-for-hadoop-2.1.0.tm6-jar-with-dependencies.jar
+mvn -Phadoop_2.1.0 -DskipTests -Dhadoop.version=${HADOOP_VERSION} -Dzookeeper.version=${ZOOKEEPER_VERSION} compile
+
+
