@@ -26,6 +26,7 @@ import org.apache.log4j.Logger;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import org.jboss.netty.channel.ChannelHandlerContext;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -113,7 +114,8 @@ public class SendPartitionMessagesRequest<I extends WritableComparable,
   }
 
   @Override
-  public void doRequest(ServerData<I, V, E, M> serverData) {
+  public void doRequest(ServerData<I, V, E, M> serverData,
+                        ChannelHandlerContext ctx) {
     try {
       serverData.getIncomingMessageStore().addPartitionMessages(
           vertexIdMessages, partitionId);

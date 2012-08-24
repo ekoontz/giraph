@@ -42,7 +42,7 @@ import java.io.IOException;
 @SuppressWarnings("rawtypes")
 public class NullReply<I extends WritableComparable,
     V extends Writable, E extends Writable,
-    M extends Writable> extends PeerMessage<I, V, E, M> {
+    M extends Writable> extends WritableRequest<I, V, E, M> {
   /** Class logger */
   private static final Logger LOG =
       Logger.getLogger(NullReply.class);
@@ -59,13 +59,13 @@ public class NullReply<I extends WritableComparable,
   public NullReply() { }
 
   @Override
-  public void readFields(DataInput input) throws IOException {
+  public void readFieldsRequest(DataInput input) throws IOException {
     LOG.debug("read fields (none)");
     byte zeroByte = input.readByte();
   }
 
   @Override
-  public void write(DataOutput output) throws IOException {
+  public void writeRequest(DataOutput output) throws IOException {
     LOG.debug("writing one byte (write).");
     output.writeByte(zeroByte);
   }

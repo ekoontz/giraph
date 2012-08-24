@@ -18,6 +18,7 @@
 
 package org.apache.giraph.comm;
 
+import org.apache.giraph.graph.WorkerInfo;
 import org.apache.log4j.Logger;
 
 import java.net.InetSocketAddress;
@@ -47,9 +48,11 @@ public class ClientData {
    * @param inetSocketAddress address of server
    * @param request request (actually response to server) to send.
    */
-  public void sendWritableRequest(InetSocketAddress inetSocketAddress,
+  public void sendWritableRequest(WorkerInfo workerInfo,
+                                  InetSocketAddress inetSocketAddress,
                                   WritableRequest request) {
-    nettyClient.sendWritableRequest(inetSocketAddress, request);
+    nettyClient.sendWritableRequest(workerInfo.getPartitionId(),
+      inetSocketAddress, request);
   }
 
 }

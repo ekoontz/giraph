@@ -25,6 +25,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.ipc.StandbyException;
+import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.SaslRpcServer;
 import org.apache.log4j.Logger;
@@ -50,7 +51,7 @@ import java.io.IOException;
 @SuppressWarnings("rawtypes")
 public class SaslTokenMessage<I extends WritableComparable,
     V extends Writable, E extends Writable,
-    M extends Writable> extends PeerMessage<I, V, E, M> {
+    M extends Writable> extends WritableRequest<I, V, E, M> {
   /** Class logger */
   private static final Logger LOG =
       Logger.getLogger(SaslTokenMessage.class);
@@ -77,7 +78,7 @@ public class SaslTokenMessage<I extends WritableComparable,
   }
 
   @Override
-  public void readFields(DataInput input) throws IOException {
+  public void readFieldsRequest(DataInput input) throws IOException {
     LOG.debug("reading fields from DataInput: " + input);
     int tokenSize = input.readInt();
     LOG.debug("token size is: " + tokenSize);
@@ -88,7 +89,7 @@ public class SaslTokenMessage<I extends WritableComparable,
   }
 
   @Override
-  public void write(DataOutput output) throws IOException {
+  public void writeRequest(DataOutput output) throws IOException {
     LOG.debug("write() called on token of length: " + token.length);
     output.writeInt(token.length);
     output.write(token);
@@ -149,15 +150,4 @@ public class SaslTokenMessage<I extends WritableComparable,
     }
     return;
   }
-
-  @Override
-  public Configuration getConf() {
-    return conf;
-  }
-
-  @Override
-  public void setConf(Configuration conf) {
-    this.conf = conf;
-  }
-
 }

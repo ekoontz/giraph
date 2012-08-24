@@ -33,6 +33,7 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.log4j.Logger;
 
 import com.google.common.collect.Maps;
+import org.jboss.netty.channel.ChannelHandlerContext;
 
 /**
  * Send a collection of vertex mutations for a partition.
@@ -108,7 +109,8 @@ public class SendPartitionMutationsRequest<I extends WritableComparable,
   }
 
   @Override
-  public void doRequest(ServerData<I, V, E, M> serverData) {
+  public void doRequest(ServerData<I, V, E, M> serverData,
+                        ChannelHandlerContext ctx) {
     ConcurrentHashMap<I, VertexMutations<I, V, E, M>> vertexMutations =
       serverData.getVertexMutations();
     for (Entry<I, VertexMutations<I, V, E, M>> entry :

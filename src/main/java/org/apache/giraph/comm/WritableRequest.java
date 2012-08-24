@@ -26,6 +26,7 @@ import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+import org.jboss.netty.channel.ChannelHandlerContext;
 
 /**
  * Interface for requests to implement
@@ -88,7 +89,8 @@ public abstract class WritableRequest<I extends WritableComparable,
    *
    * @param serverData Accessible data that can be mutated per the request
    */
-  public abstract void doRequest(ServerData<I, V, E, M> serverData);
+  public abstract void doRequest(ServerData<I, V, E, M> serverData,
+                                 ChannelHandlerContext ctx);
 
   @Override
   public final Configuration getConf() {

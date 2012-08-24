@@ -201,7 +201,7 @@ public class NettyWorkerClient<I extends WritableComparable,
     // If this is local, execute locally
     if (service.getWorkerInfo().getPartitionId() ==
         workerInfo.getPartitionId()) {
-      writableRequest.doRequest(serverData);
+      writableRequest.doRequest(serverData, null);
     } else {
       nettyClient.sendWritableRequest(
           workerInfo.getPartitionId(), remoteServerAddress, writableRequest);

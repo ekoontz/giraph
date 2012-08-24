@@ -32,6 +32,7 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.log4j.Logger;
 
 import com.google.common.collect.Lists;
+import org.jboss.netty.channel.ChannelHandlerContext;
 
 /**
  * Send a collection of vertices for a partition.
@@ -97,7 +98,8 @@ public class SendVertexRequest<I extends WritableComparable,
   }
 
   @Override
-  public void doRequest(ServerData<I, V, E, M> serverData) {
+  public void doRequest(ServerData<I, V, E, M> serverData,
+                        ChannelHandlerContext ctx) {
     ConcurrentHashMap<Integer, Collection<Vertex<I, V, E, M>>>
     partitionVertexMap = serverData.getPartitionVertexMap();
     if (vertices.isEmpty()) {

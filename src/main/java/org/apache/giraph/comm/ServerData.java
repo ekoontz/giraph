@@ -24,6 +24,7 @@ import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexMutations;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -67,6 +68,8 @@ public class ServerData<I extends WritableComparable,
    */
   private final ConcurrentHashMap<I, VertexMutations<I, V, E, M>>
   vertexMutations = new ConcurrentHashMap<I, VertexMutations<I, V, E, M>>();
+
+  public JobTokenSecretManager secretManager;
 
   /** @param messageStoreFactory Factory for message stores */
   public ServerData(MessageStoreFactory<I, M, MessageStoreByPartition<I, M>>

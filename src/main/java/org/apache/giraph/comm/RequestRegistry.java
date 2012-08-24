@@ -18,6 +18,7 @@
 
 package org.apache.giraph.comm;
 
+import org.apache.log4j.Logger;
 import java.util.EnumMap;
 import java.util.Map;
 
@@ -25,6 +26,9 @@ import java.util.Map;
  * Registry of the requests that are supported.
  */
 public class RequestRegistry {
+  /** Class logger */
+  private static final Logger LOG = Logger.getLogger(RequestRegistry.class);
+
   /** Mapping of enum type to class type */
   @SuppressWarnings("rawtypes")
   private final Map<Type, Class<? extends WritableRequest>> requestMap =
@@ -47,8 +51,14 @@ public class RequestRegistry {
     SEND_PARTITION_CURRENT_MESSAGES_REQUEST,
     /** Send a partition of mutations */
     SEND_PARTITION_MUTATIONS_REQUEST,
+    /** SASL authentication */
+    SASL_TOKEN,
+    /** server sends this to client when SASL authentication with client is complete */
+    SASL_COMPLETE,
+    /** server sends this back for all non-SASL token replies */
+    MINIMAL_REPLY,
     /** Sending messages request */
-    SEND_MESSAGES_REQUEST,
+    SEND_MESSAGES_REQUEST
   }
 
   /**
@@ -63,9 +73,14 @@ public class RequestRegistry {
     }
     if (requestMap.put(writableRequest.getType(),
         writableRequest.getClass()) != null) {
+      LOG.error("registerClass: Class " + writableRequest.getClass() + " already exists!");
       throw new IllegalArgumentException("registerClass: Class " +
           writableRequest.getClass() + " already exists!");
     }
+  }
+
+  public int size() {
+    return requestMap.size();
   }
 
   /**
@@ -76,7 +91,9 @@ public class RequestRegistry {
    */
   @SuppressWarnings("rawtypes")
   public Class<? extends WritableRequest> getClass(Type type) {
+    LOG.debug("getClass() looking for type: " + type);
     if (!shutdown) {
+      LOG.error("getClass: Illegal to get class before finalized.");
       throw new IllegalStateException(
           "getClass: Illegal to get class before finalized");
     }
@@ -84,8 +101,8 @@ public class RequestRegistry {
     Class<? extends WritableRequest> writableRequestClass =
         requestMap.get(type);
     if (writableRequestClass == null) {
-      throw new IllegalArgumentException(
-          "getClass: Couldn't find type " + type);
+      LOG.error("getClass: Couldn't find type " + type);
+      throw new IllegalArgumentException("getClass: Couldn't find type " + type);
     }
 
     return writableRequestClass;

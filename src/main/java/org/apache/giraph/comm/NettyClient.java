@@ -23,6 +23,7 @@ import com.google.common.collect.MapMaker;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -32,6 +33,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.giraph.graph.GiraphJob;
+import org.apache.giraph.graph.WorkerInfo;
 import org.apache.giraph.utils.TimedLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
@@ -43,6 +45,7 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelConfig;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
+import org.jboss.netty.channel.ChannelLocal;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.Channels;
@@ -123,6 +126,9 @@ public class NettyClient<I extends WritableComparable,
       new AddressRequestIdGenerator();
   /** Client id */
   private final int clientId;
+
+  public static final ChannelLocal<SaslNettyClient> SASL =
+    new ChannelLocal<SaslNettyClient>();
 
   /**
    * Only constructor
@@ -210,6 +216,19 @@ public class NettyClient<I extends WritableComparable,
       }
     });
   }
+
+  // TODO: move to RequestEncoder or SaslTokenMessage.
+  public void sendSaslToken(WorkerInfo workerInfo,
+                            SocketAddress remoteServer, byte[] token) {
+    LOG.debug("sending sasl token of length: " + token.length +
+      " to remote server: " + remoteServer);
+    SaslTokenMessage saslTokenMessage = new SaslTokenMessage<I, V, E, M>(token);
+    sendWritableRequest(workerInfo.getPartitionId(),
+      (InetSocketAddress) remoteServer, saslTokenMessage);
+    LOG.debug("sent sasl token of length: " + token.length +
+      " to remote server: " + remoteServer);
+  }
+
 
   /**
    * Pair object for connectAllAddresses().

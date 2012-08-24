@@ -104,7 +104,7 @@ public class RequestServerHandler<I extends WritableComparable,
     if (workerRequestReservedMap.reserveRequest(
         writableRequest.getClientId(),
         writableRequest.getRequestId())) {
-      writableRequest.doRequest(serverData);
+      writableRequest.doRequest(serverData, null);
       alreadyDone = 0;
     } else {
       LOG.info("messageReceived: Request id " +

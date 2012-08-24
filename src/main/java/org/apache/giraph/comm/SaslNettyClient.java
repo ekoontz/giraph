@@ -18,6 +18,7 @@
 
 package org.apache.giraph.comm;
 
+import org.apache.giraph.graph.WorkerInfo;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.SaslRpcServer;
@@ -123,14 +124,15 @@ public class SaslNettyClient {
    *
    * @throws IOException
    */
-  public void saslInitialize(SocketAddress remoteAddress, NettyClient<?,?,?,?> nettyClient)
+  public void saslInitialize(WorkerInfo workerInfo, SocketAddress remoteAddress,
+                             NettyClient<?,?,?,?> nettyClient)
       throws IOException {
     byte[] saslToken = new byte[0];
     try {
       if (saslClient.hasInitialResponse()) {
         saslToken = saslClient.evaluateChallenge(saslToken);
       }
-      nettyClient.sendSaslToken(saslToken, remoteAddress);
+      nettyClient.sendSaslToken(workerInfo, remoteAddress, saslToken);
       return;
     } catch (IOException e) {
       try {

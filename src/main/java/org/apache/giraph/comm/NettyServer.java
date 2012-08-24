@@ -30,11 +30,13 @@ import org.apache.giraph.graph.GiraphJob;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
 import org.apache.log4j.Logger;
 import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.channel.ChannelFactory;
+import org.jboss.netty.channel.ChannelLocal;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.Channels;
@@ -96,6 +98,11 @@ public class NettyServer<I extends WritableComparable,
   /** Request completed map per worker */
   private final WorkerRequestReservedMap workerRequestReservedMap;
 
+  /** Allows clients to SASL authenticate with us (the server) */
+  private JobTokenSecretManager secretManager = new JobTokenSecretManager();
+  public static final ChannelLocal<SaslNettyServer> channelSaslNettyServers =
+    new ChannelLocal<SaslNettyServer>();
+
   /**
    * Constructor for creating the server
    *
@@ -112,7 +119,7 @@ public class NettyServer<I extends WritableComparable,
     requestRegistry.registerClass(
         new SendPartitionMutationsRequest<I, V, E, M>());
     requestRegistry.registerClass(
-        new SendPartitionCurrentMessagesRequest<I, V, E, M>());
+    new SendPartitionCurrentMessagesRequest<I, V, E, M>());
     requestRegistry.shutdown();
 
     sendBufferSize = conf.getInt(GiraphJob.SERVER_SEND_BUFFER_SIZE,
