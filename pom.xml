@@ -24,7 +24,7 @@ under the License.
   <groupId>org.apache.giraph</groupId>
   <artifactId>giraph</artifactId>
   <packaging>jar</packaging>
-  <version>0.2-SNAPSHOT</version>
+  <version>0.2-tm6</version>
 
   <name>Apache Giraph</name>
   <url>http://incubator.apache.org/giraph/</url>
@@ -787,6 +787,69 @@ under the License.
       </dependencies>
     </profile>
 
+    <profile>
+      <id>hadoop_2.0.1</id>
+       <activation>
+        <property>
+          <name>hadoop</name>
+          <value>2.0.1</value>
+        </property>
+      </activation>
+      <properties>
+        <hadoop.version>2.0.1-SNAPSHOT</hadoop.version>
+      </properties>
+      <dependencies>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-common</artifactId>
+      <version>${hadoop.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-mapreduce-client-core</artifactId>
+      <version>${hadoop.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-mapreduce-client-common</artifactId>
+      <version>${hadoop.version}</version>
+    </dependency>
+      </dependencies>
+    </profile>
+
+    <profile>
+      <id>hadoop_2.1.0</id>
+       <activation>
+        <property>
+          <name>hadoop</name>
+          <value>2.1.0</value>
+        </property>
+      </activation>
+      <properties>
+        <hadoop.version>2.1.0.tm6</hadoop.version>
+      </properties>
+      <dependencies>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-common</artifactId>
+      <version>${hadoop.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-mapreduce-client-core</artifactId>
+      <version>${hadoop.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-mapreduce-client-common</artifactId>
+      <version>${hadoop.version}</version>
+    </dependency>
+      </dependencies>
+    </profile>
     <profile>
       <id>hadoop_trunk</id>
        <activation>
