@@ -22,9 +22,11 @@ import org.apache.giraph.comm.messages.MessageStoreByPartition;
 import org.apache.giraph.comm.messages.MessageStoreFactory;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexMutations;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
+import org.apache.log4j.Logger;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -41,6 +43,9 @@ import java.util.concurrent.ConcurrentHashMap;
 @SuppressWarnings("rawtypes")
 public class ServerData<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable> {
+  /** Class logger */
+  private static final Logger LOG = Logger.getLogger(ServerData.class);
+
   /**
    * Map of partition ids to incoming vertices from other workers.
    * (Synchronized on values)
@@ -73,11 +78,14 @@ public class ServerData<I extends WritableComparable,
 
   /** @param messageStoreFactory Factory for message stores */
   public ServerData(MessageStoreFactory<I, M, MessageStoreByPartition<I, M>>
-      messageStoreFactory) {
+      messageStoreFactory, Configuration conf) {
 
     this.messageStoreFactory = messageStoreFactory;
     currentMessageStore = messageStoreFactory.newStore();
     incomingMessageStore = messageStoreFactory.newStore();
+    LOG.debug("starting initializing SASL server..");
+    SaslNettyServer.init(conf);
+    LOG.debug("done initializing SASL server.");
   }
 
   /**

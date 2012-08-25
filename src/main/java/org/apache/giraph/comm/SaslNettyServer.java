@@ -125,6 +125,7 @@ public class SaslNettyServer {
   }
 
   public static void init(Configuration conf) {
+    LOG.debug("started static initialization");
     QualityOfProtection saslQOP = QualityOfProtection.AUTHENTICATION;
     String rpcProtection = conf.get("hadoop.rpc.protection",
         QualityOfProtection.AUTHENTICATION.name().toLowerCase());
@@ -138,6 +139,7 @@ public class SaslNettyServer {
     
     SASL_PROPS.put(Sasl.QOP, saslQOP.getSaslQop());
     SASL_PROPS.put(Sasl.SERVER_AUTH, "true");
+    LOG.debug("done with static initialization");
   }
   
   static String encodeIdentifier(byte[] identifier) {
