@@ -301,6 +301,10 @@ public class BspServiceWorker<I extends WritableComparable,
   private VertexEdgeCount loadVertices() throws IOException,
     ClassNotFoundException, InterruptedException, InstantiationException,
     IllegalAccessException, KeeperException {
+
+    LOG.debug("loadVertices() starting now.");
+
+
     String inputSplitPath = null;
     VertexEdgeCount vertexEdgeCount = new VertexEdgeCount();
     while ((inputSplitPath = reserveInputSplit()) != null) {
@@ -1362,6 +1366,7 @@ public class BspServiceWorker<I extends WritableComparable,
    */
   private void sendWorkerPartitions(
       Map<WorkerInfo, List<Integer>> workerPartitionMap) {
+    LOG.debug("sendWorkerPartitions() starting now.");
     List<Entry<WorkerInfo, List<Integer>>> randomEntryList =
         new ArrayList<Entry<WorkerInfo, List<Integer>>>(
             workerPartitionMap.entrySet());

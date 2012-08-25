@@ -120,6 +120,8 @@ public class NettyWorkerClient<I extends WritableComparable,
   public void fixPartitionIdToSocketAddrMap() {
     // 1. Fix all the cached inet addresses (remove all changed entries)
     // 2. Connect to any new RPC servers
+    LOG.debug("fixPartitionIdToSocketAddrMap() is starting now.");
+
     Set<InetSocketAddress> addresses =
         Sets.newHashSetWithExpectedSize(service.getPartitionOwners().size());
     for (PartitionOwner partitionOwner : service.getPartitionOwners()) {
@@ -149,6 +151,7 @@ public class NettyWorkerClient<I extends WritableComparable,
       }
     }
     nettyClient.connectAllAddresses(addresses);
+    LOG.debug("fixPartitionIdToSocketAddrMap() is done.");
   }
 
   /**

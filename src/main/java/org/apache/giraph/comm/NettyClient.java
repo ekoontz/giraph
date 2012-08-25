@@ -277,6 +277,9 @@ public class NettyClient<I extends WritableComparable,
 
       // Start connecting to the remote server up to n time
       for (int i = 0; i < channelsPerServer; ++i) {
+        LOG.debug("starting connection future " +
+          "(" + (i+1) + " of " + (channelsPerServer+1) +  ") " +
+          "for address: " + address);
         ChannelFuture connectionFuture = bootstrap.connect(address);
 
         waitingConnectionList.add(
@@ -291,8 +294,10 @@ public class NettyClient<I extends WritableComparable,
       List<ChannelFutureAddress> nextCheckFutures = Lists.newArrayList();
       for (ChannelFutureAddress waitingConnection : waitingConnectionList) {
         context.progress();
+        LOG.debug("waiting for connection for: " + waitingConnection.address);
         ChannelFuture future =
             waitingConnection.future.awaitUninterruptibly();
+        LOG.debug("done waiting for connection for: " + waitingConnection.address);
         if (!future.isSuccess()) {
           LOG.warn("connectAllAddresses: Future failed " +
               "to connect with " + waitingConnection.address + " with " +
@@ -321,7 +326,10 @@ public class NettyClient<I extends WritableComparable,
             rotater = new ChannelRotater();
             addressChannelMap.put(waitingConnection.address, rotater);
           }
+          LOG.debug("adding channel to rotater:" + future.getChannel());
           rotater.addChannel(future.getChannel());
+          LOG.debug("rotater for " + waitingConnection.address  + " now has "
+            + rotater.getChannels().size() + " channels.");
           ++connected;
         }
       }
