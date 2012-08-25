@@ -67,8 +67,7 @@ public class NettyWorkerClient<I extends WritableComparable,
   private final NettyClient<I, V, E, M> nettyClient;
   /** Centralized service, needed to get vertex ranges */
   private final CentralizedServiceWorker<I, V, E, M> service;
-  /**
-   * Cached map of partition ids to remote socket address.
+  /** to remote socket address.
    */
   private final Map<Integer, InetSocketAddress> partitionIndexAddressMap =
       new ConcurrentHashMap<Integer, InetSocketAddress>();
@@ -128,6 +127,15 @@ public class NettyWorkerClient<I extends WritableComparable,
       InetSocketAddress address =
           partitionIndexAddressMap.get(
               partitionOwner.getPartitionId());
+
+      if (address != null) {
+        LOG.debug("found existing address: " + address + " for partition: " +
+          partitionOwner.getPartitionId());
+      } else {
+        LOG.debug("no address for partition:" +
+          partitionOwner.getPartitionId());
+      }
+
       if (address != null &&
           (!address.getHostName().equals(
               partitionOwner.getWorkerInfo().getHostname()) ||
@@ -146,10 +154,25 @@ public class NettyWorkerClient<I extends WritableComparable,
       // No need to connect to myself
       if (service.getWorkerInfo().getPartitionId() !=
           partitionOwner.getWorkerInfo().getPartitionId()) {
-        addresses.add(getInetSocketAddress(partitionOwner.getWorkerInfo(),
-            partitionOwner.getPartitionId()));
+        InetSocketAddress address1 =
+          getInetSocketAddress(partitionOwner.getWorkerInfo(),
+            partitionOwner.getPartitionId());
+          LOG.debug("adding address: " + address1 + " for " +
+            "partition id: " + partitionOwner.getPartitionId());
+        addresses.add(address1);
+      } else {
+        LOG.debug("no need to connect to server for partition " +
+          partitionOwner.getWorkerInfo().getPartitionId() + ": it's hosted " +
+          "here at: " + service.getWorkerInfo().getInetSocketAddress());
       }
     }
+
+    LOG.debug("(begin list of addresses to connect to)");
+    for(InetSocketAddress each: addresses) {
+      LOG.debug("address:" + each);
+    }
+    LOG.debug("(end list of addresses to connect to)");
+
     nettyClient.connectAllAddresses(addresses);
     LOG.debug("fixPartitionIdToSocketAddrMap() is done.");
   }

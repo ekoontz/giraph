@@ -278,7 +278,7 @@ public class NettyClient<I extends WritableComparable,
       // Start connecting to the remote server up to n time
       for (int i = 0; i < channelsPerServer; ++i) {
         LOG.debug("starting connection future " +
-          "(" + (i+1) + " of " + (channelsPerServer+1) +  ") " +
+          "(" + (i+1) + " of " + channelsPerServer +  ") " +
           "for address: " + address);
         ChannelFuture connectionFuture = bootstrap.connect(address);
 
