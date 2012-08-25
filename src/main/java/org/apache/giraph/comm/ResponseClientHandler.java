@@ -87,6 +87,9 @@ public class ResponseClientHandler extends SimpleChannelUpstreamHandler {
           "messageReceived: Got IOException ", e);
     }
 
+    LOG.debug("message received: senderId=" + senderId + "; requestId=" +
+      requestId + ")");
+
     // Simulate a failed response on the first response (if desired)
     if (dropFirstResponse && !ALREADY_DROPPED_FIRST_RESPONSE) {
       LOG.info("messageReceived: Simulating dropped response " + response +
@@ -106,16 +109,16 @@ public class ResponseClientHandler extends SimpleChannelUpstreamHandler {
     }
 
     RequestInfo requestInfo = workerIdOutstandingRequestMap.remove(
-        new ClientRequestId(senderId, requestId));
+      new ClientRequestId(senderId, requestId));
     if (requestInfo == null) {
       throw new IllegalStateException("messageReceived: Impossible to " +
-          "have a non-registered requestId " + requestId);
+        "have a non-registered requestId " + requestId);
     } else {
       if (LOG.isDebugEnabled()) {
         LOG.debug("messageReceived: Processed request id = " + requestId +
-            " " + requestInfo + ".  Waiting on " +
-            workerIdOutstandingRequestMap.size() +
-            " requests, bytes = " + buffer.capacity());
+          " " + requestInfo + ".  Waiting on " +
+          workerIdOutstandingRequestMap.size() +
+          " requests, bytes = " + buffer.capacity());
       }
     }
 

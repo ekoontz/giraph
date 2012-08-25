@@ -48,6 +48,7 @@ public class RequestEncoder<I extends WritableComparable,
   @Override
   protected Object encode(ChannelHandlerContext ctx,
       Channel channel, Object msg) throws Exception {
+    LOG.debug("encode()ing message:" + msg);
     if (!(msg instanceof WritableRequest<?, ?, ?, ?>)) {
       throw new IllegalArgumentException(
           "encode: Got a message of type " + msg.getClass());
