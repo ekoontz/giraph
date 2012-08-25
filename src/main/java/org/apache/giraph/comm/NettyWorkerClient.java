@@ -466,4 +466,10 @@ public class NettyWorkerClient<I extends WritableComparable,
   public void setup() {
     fixPartitionIdToSocketAddrMap();
   }
+
+  @Override
+  public void authenticate() {
+    LOG.debug("DOING AUTHENTICATION RIGHT HERE.");
+  }
+
 }

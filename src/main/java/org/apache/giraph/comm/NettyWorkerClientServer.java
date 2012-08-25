@@ -26,6 +26,7 @@ import org.apache.giraph.graph.partition.Partition;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.log4j.Logger;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -47,6 +48,10 @@ public class NettyWorkerClientServer<I extends WritableComparable,
   private final WorkerClient<I, V, E, M> client;
   /** Server that processes requests */
   private final WorkerServer<I, V, E, M> server;
+
+  /** Class logger */
+  private static final Logger LOG =
+    Logger.getLogger(NettyWorkerClientServer.class);
 
   /**
    * Constructor.
@@ -118,6 +123,16 @@ public class NettyWorkerClientServer<I extends WritableComparable,
   @Override
   public void setup() {
     client.fixPartitionIdToSocketAddrMap();
+    try {
+      client.authenticate();
+    } catch (IOException e) {
+      LOG.error("failed to authenticate : " + e);
+    }
+  }
+
+  @Override
+  public void authenticate() throws IOException {
+    client.authenticate();
   }
 
   @Override

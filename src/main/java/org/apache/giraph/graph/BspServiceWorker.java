@@ -304,7 +304,6 @@ public class BspServiceWorker<I extends WritableComparable,
 
     LOG.debug("loadVertices() starting now.");
 
-
     String inputSplitPath = null;
     VertexEdgeCount vertexEdgeCount = new VertexEdgeCount();
     while ((inputSplitPath = reserveInputSplit()) != null) {
@@ -323,6 +322,9 @@ public class BspServiceWorker<I extends WritableComparable,
     }
     inputSplitCache.clear();
     commService.flush();
+
+    LOG.debug("loadVertices() ending now: returning vertexEdgeCount: " +
+      vertexEdgeCount);
 
     return vertexEdgeCount;
   }
