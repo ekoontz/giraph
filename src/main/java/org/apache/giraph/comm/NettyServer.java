@@ -18,21 +18,36 @@
 
 package org.apache.giraph.comm;
 
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
+import java.util.Collection;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.giraph.comm.messages.SendPartitionCurrentMessagesRequest;
 import org.apache.giraph.graph.GiraphJob;
+import org.apache.giraph.hadoop.BspTokenSelector;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapreduce.security.TokenCache;
+import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
 import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
+import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.security.token.TokenInfo;
 import org.apache.log4j.Logger;
 import org.jboss.netty.bootstrap.ServerBootstrap;
+
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.channel.ChannelFactory;
@@ -56,6 +71,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
  * @param <M> Message data
  */
 @SuppressWarnings("rawtypes")
+@TokenInfo(BspTokenSelector.class)
 public class NettyServer<I extends WritableComparable,
      V extends Writable, E extends Writable,
      M extends Writable> {
@@ -98,7 +114,6 @@ public class NettyServer<I extends WritableComparable,
   /** Request completed map per worker */
   private final WorkerRequestReservedMap workerRequestReservedMap;
 
-  /** Allows clients to SASL authenticate with us (the server) */
   private JobTokenSecretManager secretManager = new JobTokenSecretManager();
   public static final ChannelLocal<SaslNettyServer> channelSaslNettyServers =
     new ChannelLocal<SaslNettyServer>();
@@ -112,6 +127,42 @@ public class NettyServer<I extends WritableComparable,
   public NettyServer(Configuration conf, ServerData<I, V, E, M> serverData) {
     this.conf = conf;
     this.serverData = serverData;
+    String localJobTokenFile = System.getenv().get(
+        UserGroupInformation.HADOOP_TOKEN_FILE_LOCATION);
+    if (localJobTokenFile != null) {
+      JobConf jobConf = new JobConf(conf);
+      if (true) {
+        try {
+          LOG.debug("loading credentials from localJobTokenFile: " + localJobTokenFile);
+          Credentials credentials =
+              TokenCache.loadTokens(localJobTokenFile, jobConf);
+          LOG.debug("credentials loaded are: " + credentials);
+          LOG.debug("credentials size: " + credentials.numberOfTokens());
+          Collection<Token<? extends TokenIdentifier>> collection = credentials.getAllTokens();
+          for(Token<? extends TokenIdentifier> token:  collection) {
+            TokenIdentifier tokenIdentifier = token.decodeIdentifier();
+            LOG.debug("token loaded:" + token);
+            LOG.debug("tokenIdentifier:" + tokenIdentifier);
+            if (tokenIdentifier instanceof JobTokenIdentifier) {
+              Token<JobTokenIdentifier> theToken = (Token<JobTokenIdentifier>)token;
+              JobTokenIdentifier jobTokenIdentifier = (JobTokenIdentifier)tokenIdentifier;
+              LOG.debug("cast to job token identifier: " + jobTokenIdentifier);
+              secretManager.addTokenForJob(jobTokenIdentifier.getJobId().toString(), theToken);
+              LOG.debug("JobID: " + jobTokenIdentifier.getJobId());
+              LOG.debug("Password for jobTokenIdentifier:" + secretManager.retrievePassword(jobTokenIdentifier));
+            } else {
+              LOG.debug("ignoring non-JobTokenIdentifier: " + tokenIdentifier);
+            }
+          }
+          LOG.debug("loaded credentials.");
+        } catch (IOException e) {
+          LOG.error("failed to load tokens:" + e);
+        }
+      }
+    }
+
+    this.serverData.secretManager = secretManager;
+    LOG.debug("set serverData's secretManager to: " + secretManager);
     requestRegistry.registerClass(
         new SendVertexRequest<I, V, E, M>());
     requestRegistry.registerClass(
@@ -120,6 +171,8 @@ public class NettyServer<I extends WritableComparable,
         new SendPartitionMutationsRequest<I, V, E, M>());
     requestRegistry.registerClass(
     new SendPartitionCurrentMessagesRequest<I, V, E, M>());
+    requestRegistry.registerClass(
+        new SaslTokenMessage<I, V, E, M>());
     requestRegistry.shutdown();
 
     sendBufferSize = conf.getInt(GiraphJob.SERVER_SEND_BUFFER_SIZE,
