@@ -85,7 +85,7 @@ public class NettyWorkerServer<I extends WritableComparable,
         GiraphJob.USE_OUT_OF_CORE_MESSAGES_DEFAULT);
     if (!useOutOfCoreMessaging) {
       serverData = new ServerData<I, V, E, M>(
-          SimpleMessageStore.newFactory(service, conf));
+          SimpleMessageStore.newFactory(service, conf), conf);
     } else {
       int maxMessagesInMemory = conf.getInt(GiraphJob.MAX_MESSAGES_IN_MEMORY,
           GiraphJob.MAX_MESSAGES_IN_MEMORY_DEFAULT);
@@ -97,7 +97,7 @@ public class NettyWorkerServer<I extends WritableComparable,
       MessageStoreFactory<I, M, MessageStoreByPartition<I, M>>
           storeFactory = DiskBackedMessageStoreByPartition.newFactory(service,
               maxMessagesInMemory, partitionStoreFactory);
-      serverData = new ServerData<I, V, E, M>(storeFactory);
+      serverData = new ServerData<I, V, E, M>(storeFactory, conf);
     }
 
     nettyServer = new NettyServer<I, V, E, M>(conf, serverData);
