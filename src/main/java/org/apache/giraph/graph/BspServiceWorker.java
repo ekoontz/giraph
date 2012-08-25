@@ -566,6 +566,7 @@ public class BspServiceWorker<I extends WritableComparable,
     workerGraphPartitioner.updatePartitionOwners(
         getWorkerInfo(), masterSetPartitionOwners, getPartitionMap());
 
+    // includes SASL authentication, if netty.
     commService.setup();
 
     // Ensure the InputSplits are ready for processing before processing

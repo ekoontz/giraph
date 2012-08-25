@@ -38,7 +38,7 @@ while [ "$?" -eq "0" ] ; do
       rm -rf /tmp/logs
 
       $HADOOP_RUNTIME/bin/hadoop jar /Users/ekoontz/giraph/target/giraph-0.2-tm6-for-hadoop-2.1.0.tm6-jar-with-dependencies.jar \
-         org.apache.giraph.benchmark.PageRankBenchmark  -Dgiraph.useNetty=true -e 1 -s 20 -v -V 10 -w 4
+         org.apache.giraph.benchmark.PageRankBenchmark  -Dgiraph.useNetty=true -e 1 -s 10 -v -V 10 -w 2
       #uncomment for dev work
       exit
 done

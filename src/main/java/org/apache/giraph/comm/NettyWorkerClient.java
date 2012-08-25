@@ -469,7 +469,7 @@ public class NettyWorkerClient<I extends WritableComparable,
 
   @Override
   public void authenticate() {
-    LOG.debug("DOING AUTHENTICATION RIGHT HERE.");
+    nettyClient.authenticate();
   }
 
 }

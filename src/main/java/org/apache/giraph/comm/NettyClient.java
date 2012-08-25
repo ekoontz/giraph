@@ -22,6 +22,8 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.MapMaker;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.List;
@@ -38,7 +40,14 @@ import org.apache.giraph.utils.TimedLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.security.TokenCache;
+import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
+import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.SaslRpcServer;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
 import org.apache.log4j.Logger;
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.channel.Channel;
@@ -217,19 +226,6 @@ public class NettyClient<I extends WritableComparable,
     });
   }
 
-  // TODO: move to RequestEncoder or SaslTokenMessage.
-  public void sendSaslToken(WorkerInfo workerInfo,
-                            SocketAddress remoteServer, byte[] token) {
-    LOG.debug("sending sasl token of length: " + token.length +
-      " to remote server: " + remoteServer);
-    SaslTokenMessage saslTokenMessage = new SaslTokenMessage<I, V, E, M>(token);
-    sendWritableRequest(workerInfo.getPartitionId(),
-      (InetSocketAddress) remoteServer, saslTokenMessage);
-    LOG.debug("sent sasl token of length: " + token.length +
-      " to remote server: " + remoteServer);
-  }
-
-
   /**
    * Pair object for connectAllAddresses().
    */
@@ -348,6 +344,83 @@ public class NettyClient<I extends WritableComparable,
           "connectAllAddresses: Too many failures (" + failures + ").");
     }
   }
+
+  public void authenticate() {
+    LOG.debug("nettyClient is authenticating now.");
+    for(InetSocketAddress address: addressChannelMap.keySet()) {
+      LOG.debug("authenticating with address:" + address);
+      ChannelRotater channelRotater = addressChannelMap.get(address);
+      for(Channel channel: channelRotater.getChannels()) {
+        LOG.debug("authenticating channel: " + channel);
+
+        // add per-channel SaslNettyClient.
+        initiateSaslAuthentication(channel);
+
+      }
+    }
+    LOG.debug("nettyClient is done authenticating.");
+  }
+
+  public void initiateSaslAuthentication(Channel channel) {
+    LOG.debug("creating saslNettyClient now.");
+    try {
+      SaslNettyClient saslNettyClient = new SaslNettyClient(
+        SaslRpcServer.AuthMethod.DIGEST,
+        createJobToken(new Configuration()),null);
+      SASL.set(channel,saslNettyClient);
+
+      LOG.debug("storing saslNettyClient at key: " + channel);
+      LOG.debug("created: " + SASL.get(channel));
+
+      byte[] saslToken = new byte[0];
+      if (saslNettyClient.saslClient.hasInitialResponse()) {
+                saslToken = saslNettyClient.saslClient.evaluateChallenge(saslToken);
+      }
+      SaslTokenMessage<I, V, E, M> saslTokenMessage =
+        new SaslTokenMessage<I, V, E, M>();
+      saslTokenMessage.token = saslToken;
+      LOG.debug("(sendingWritableRequest goes here)");
+//      sendWritableRequest(-1, (InetSocketAddress)channel.getRemoteAddress(),
+//        saslTokenMessage);
+    } catch (IOException e) {
+      LOG.error("Failed to authenticate with server due to error: " + e);
+    }
+    return;
+  }
+
+  // TODO: move to RequestEncoder or SaslTokenMessage.
+  public void sendSaslToken(WorkerInfo workerInfo,
+                            SocketAddress remoteServer, byte[] token) {
+    LOG.debug("sending sasl token of length: " + token.length +
+      " to remote server: " + remoteServer);
+    SaslTokenMessage saslTokenMessage = new SaslTokenMessage<I, V, E, M>(token);
+    sendWritableRequest(workerInfo.getPartitionId(),
+      (InetSocketAddress) remoteServer, saslTokenMessage);
+    LOG.debug("sent sasl token of length: " + token.length +
+      " to remote server: " + remoteServer);
+  }
+
+  /**
+   * Obtain JobToken, which we'll use as a credential for SASL authentication
+   * when connecting to other Giraph BSPWorkers.
+   */
+  private Token<JobTokenIdentifier> createJobToken(Configuration conf)
+    throws IOException {
+    String localJobTokenFile = System.getenv().get(
+      UserGroupInformation.HADOOP_TOKEN_FILE_LOCATION);
+    if (localJobTokenFile != null) {
+      JobConf jobConf = new JobConf(conf);
+      Credentials credentials =
+        TokenCache.loadTokens(localJobTokenFile, jobConf);
+      return TokenCache.getJobToken(credentials);
+    } else {
+      throw new IOException("Cannot obtain authentication credentials for " +
+        "job: " +
+        "file: '" + UserGroupInformation.HADOOP_TOKEN_FILE_LOCATION +
+        "' not found");
+    }
+  }
+
 
   /**
    * Stop the client.
