@@ -380,7 +380,7 @@ public class NettyClient<I extends WritableComparable,
         new SaslTokenMessage<I, V, E, M>();
       saslTokenMessage.token = saslToken;
       LOG.debug("(sendingWritableRequest goes here)");
-      if (false) {
+      if (true) {
         sendWritableRequest(-1, (InetSocketAddress)channel.getRemoteAddress(),
           saslTokenMessage);
       }
@@ -544,11 +544,11 @@ public class NettyClient<I extends WritableComparable,
     LOG.debug("generated ClientRequestId: " + clientRequestId);
 
     RequestInfo oldRequestInfo = clientRequestIdRequestInfoMap.putIfAbsent(
-        clientRequestId, newRequestInfo);
+      clientRequestId, newRequestInfo);
     if (oldRequestInfo != null) {
       throw new IllegalStateException("sendWritableRequest: Impossible to " +
-          "have a previous request id = " + request.getRequestId() + ", " +
-          "request info of " + oldRequestInfo);
+        "have a previous request id = " + request.getRequestId() + ", " +
+        "request info of " + oldRequestInfo);
     }
     ChannelFuture writeFuture = channel.write(request);
     newRequestInfo.setWriteFuture(writeFuture);
@@ -557,7 +557,6 @@ public class NettyClient<I extends WritableComparable,
         clientRequestIdRequestInfoMap.size() > maxNumberOfOpenRequests) {
       waitSomeRequests(maxNumberOfOpenRequests);
     }
-
     LOG.debug("sendWritableRequest (end):" + destWorkerId + "," + remoteServer +
       "," + request);
   }
