@@ -380,8 +380,10 @@ public class NettyClient<I extends WritableComparable,
         new SaslTokenMessage<I, V, E, M>();
       saslTokenMessage.token = saslToken;
       LOG.debug("(sendingWritableRequest goes here)");
-//      sendWritableRequest(-1, (InetSocketAddress)channel.getRemoteAddress(),
-//        saslTokenMessage);
+      if (false) {
+        sendWritableRequest(-1, (InetSocketAddress)channel.getRemoteAddress(),
+          saslTokenMessage);
+      }
     } catch (IOException e) {
       LOG.error("Failed to authenticate with server due to error: " + e);
     }
@@ -521,7 +523,11 @@ public class NettyClient<I extends WritableComparable,
   public void sendWritableRequest(Integer destWorkerId,
                                   InetSocketAddress remoteServer,
                                   WritableRequest<I, V, E, M> request) {
+    LOG.debug("sendWritableRequest (begin):" + destWorkerId + "," + remoteServer +
+      "," + request);
     if (clientRequestIdRequestInfoMap.isEmpty()) {
+      LOG.debug("clientRequestIdRequestInfoMap is empty: " +
+        "calling resetAll()");
       byteCounter.resetAll();
     }
 
@@ -531,9 +537,14 @@ public class NettyClient<I extends WritableComparable,
         addressRequestIdGenerator.getNextRequestId(remoteServer));
 
     RequestInfo newRequestInfo = new RequestInfo(remoteServer, request);
+    LOG.debug("generating new ClientRequestId from destWorkerId=" +
+      destWorkerId + " ; request: " + request);
+    ClientRequestId clientRequestId =
+      new ClientRequestId(destWorkerId, request.getRequestId());
+    LOG.debug("generated ClientRequestId: " + clientRequestId);
+
     RequestInfo oldRequestInfo = clientRequestIdRequestInfoMap.putIfAbsent(
-        new ClientRequestId(destWorkerId, request.getRequestId()),
-            newRequestInfo);
+        clientRequestId, newRequestInfo);
     if (oldRequestInfo != null) {
       throw new IllegalStateException("sendWritableRequest: Impossible to " +
           "have a previous request id = " + request.getRequestId() + ", " +
@@ -546,6 +557,9 @@ public class NettyClient<I extends WritableComparable,
         clientRequestIdRequestInfoMap.size() > maxNumberOfOpenRequests) {
       waitSomeRequests(maxNumberOfOpenRequests);
     }
+
+    LOG.debug("sendWritableRequest (end):" + destWorkerId + "," + remoteServer +
+      "," + request);
   }
 
   /**
