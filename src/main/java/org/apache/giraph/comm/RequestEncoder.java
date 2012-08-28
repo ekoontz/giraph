@@ -18,6 +18,8 @@
 
 package org.apache.giraph.comm;
 
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
 import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBufferOutputStream;
@@ -28,8 +30,16 @@ import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
 
 /**
  * Requests have a request type and an encoded request.
+ *
+ * @param <I> Vertex id
+ * @param <V> Vertex data
+ * @param <E> Edge data
+ * @param <M> Message data
  */
-public class RequestEncoder extends OneToOneEncoder {
+@SuppressWarnings("rawtypes")
+public class RequestEncoder<I extends WritableComparable,
+    V extends Writable, E extends Writable,
+    M extends Writable> extends OneToOneEncoder {
   /** Class logger */
   private static final Logger LOG = Logger.getLogger(RequestEncoder.class);
   /** Holds the place of the message length until known */
@@ -38,12 +48,13 @@ public class RequestEncoder extends OneToOneEncoder {
   @Override
   protected Object encode(ChannelHandlerContext ctx,
       Channel channel, Object msg) throws Exception {
-    if (!(msg instanceof WritableRequest)) {
+    if (!(msg instanceof WritableRequest<?, ?, ?, ?>)) {
       throw new IllegalArgumentException(
           "encode: Got a message of type " + msg.getClass());
     }
     @SuppressWarnings("unchecked")
-    WritableRequest writableRequest = (WritableRequest) msg;
+    WritableRequest<I, V, E, M> writableRequest =
+        (WritableRequest<I, V, E, M>) msg;
     ChannelBufferOutputStream outputStream =
         new ChannelBufferOutputStream(ChannelBuffers.dynamicBuffer(
             10, ctx.getChannel().getConfig().getBufferFactory()));

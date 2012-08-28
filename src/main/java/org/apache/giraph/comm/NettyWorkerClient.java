@@ -64,11 +64,10 @@ public class NettyWorkerClient<I extends WritableComparable,
   /** Hadoop configuration */
   private final Configuration conf;
   /** Netty client that does that actual I/O */
-  private final NettyClient nettyClient;
+  private final NettyClient<I, V, E, M> nettyClient;
   /** Centralized service, needed to get vertex ranges */
   private final CentralizedServiceWorker<I, V, E, M> service;
-  /**
-   * Cached map of partition ids to remote socket address.
+  /** to remote socket address.
    */
   private final Map<Integer, InetSocketAddress> partitionIndexAddressMap =
       new ConcurrentHashMap<Integer, InetSocketAddress>();
@@ -101,7 +100,7 @@ public class NettyWorkerClient<I extends WritableComparable,
   public NettyWorkerClient(Mapper<?, ?, ?, ?>.Context context,
                            CentralizedServiceWorker<I, V, E, M> service,
                            ServerData<I, V, E, M> serverData) {
-    this.nettyClient = new NettyClient(context);
+    this.nettyClient = new NettyClient<I, V, E, M>(context);
     this.conf = context.getConfiguration();
     this.service = service;
     maxMessagesPerPartition = conf.getInt(GiraphJob.MSG_SIZE,
@@ -120,12 +119,23 @@ public class NettyWorkerClient<I extends WritableComparable,
   public void fixPartitionIdToSocketAddrMap() {
     // 1. Fix all the cached inet addresses (remove all changed entries)
     // 2. Connect to any new RPC servers
+    LOG.debug("fixPartitionIdToSocketAddrMap() is starting now.");
+
     Set<InetSocketAddress> addresses =
         Sets.newHashSetWithExpectedSize(service.getPartitionOwners().size());
     for (PartitionOwner partitionOwner : service.getPartitionOwners()) {
       InetSocketAddress address =
           partitionIndexAddressMap.get(
               partitionOwner.getPartitionId());
+
+      if (address != null) {
+        LOG.debug("found existing address: " + address + " for partition: " +
+          partitionOwner.getPartitionId());
+      } else {
+        LOG.debug("no address for partition:" +
+          partitionOwner.getPartitionId());
+      }
+
       if (address != null &&
           (!address.getHostName().equals(
               partitionOwner.getWorkerInfo().getHostname()) ||
@@ -144,16 +154,27 @@ public class NettyWorkerClient<I extends WritableComparable,
       // No need to connect to myself
       if (service.getWorkerInfo().getPartitionId() !=
           partitionOwner.getWorkerInfo().getPartitionId()) {
-        addresses.add(getInetSocketAddress(partitionOwner.getWorkerInfo(),
-            partitionOwner.getPartitionId()));
+        InetSocketAddress address1 =
+          getInetSocketAddress(partitionOwner.getWorkerInfo(),
+            partitionOwner.getPartitionId());
+          LOG.debug("adding address: " + address1 + " for " +
+            "partition id: " + partitionOwner.getPartitionId());
+        addresses.add(address1);
+      } else {
+        LOG.debug("no need to connect to server for partition " +
+          partitionOwner.getWorkerInfo().getPartitionId() + ": it's hosted " +
+          "here at: " + service.getWorkerInfo().getInetSocketAddress());
       }
     }
-    boolean useNetty = conf.getBoolean(GiraphJob.USE_NETTY,
-        GiraphJob.USE_NETTY_DEFAULT);
-    if (useNetty) {
-      addresses.add(service.getMasterInfo().getInetSocketAddress());
+
+    LOG.debug("(begin list of addresses to connect to)");
+    for(InetSocketAddress each: addresses) {
+      LOG.debug("address:" + each);
     }
+    LOG.debug("(end list of addresses to connect to)");
+
     nettyClient.connectAllAddresses(addresses);
+    LOG.debug("fixPartitionIdToSocketAddrMap() is done.");
   }
 
   /**
@@ -202,11 +223,11 @@ public class NettyWorkerClient<I extends WritableComparable,
    */
   private void doRequest(WorkerInfo workerInfo,
                          InetSocketAddress remoteServerAddress,
-                         WritableRequest writableRequest) {
+                         WritableRequest<I, V, E, M> writableRequest) {
     // If this is local, execute locally
     if (service.getWorkerInfo().getPartitionId() ==
         workerInfo.getPartitionId()) {
-      ((WorkerRequest) writableRequest).doRequest(serverData);
+      writableRequest.doRequest(serverData, null);
     } else {
       nettyClient.sendWritableRequest(
           workerInfo.getPartitionId(), remoteServerAddress, writableRequest);
@@ -234,7 +255,7 @@ public class NettyWorkerClient<I extends WritableComparable,
           getInetSocketAddress(partitionOwner.getWorkerInfo(), partitionId);
       Map<I, Collection<M>> partitionMessages =
           sendMessageCache.removePartitionMessages(partitionId);
-      WritableRequest writableRequest =
+      WritableRequest<I, V, E, M> writableRequest =
           new SendPartitionMessagesRequest<I, V, E, M>(
               partitionId, partitionMessages);
       doRequest(partitionOwner.getWorkerInfo(), remoteServerAddress,
@@ -253,7 +274,7 @@ public class NettyWorkerClient<I extends WritableComparable,
     }
 
     int partitionId = partition.getId();
-    WritableRequest vertexRequest =
+    WritableRequest<I, V, E, M> vertexRequest =
         new SendVertexRequest<I, V, E, M>(partitionId,
             partition.getVertices());
     doRequest(workerInfo, remoteServerAddress, vertexRequest);
@@ -274,7 +295,7 @@ public class NettyWorkerClient<I extends WritableComparable,
             "sendPartitionReq: Got IOException ", e);
       }
       if (messagesInMap > maxMessagesPerPartition) {
-        WritableRequest messagesRequest = new
+        WritableRequest<I, V, E, M> messagesRequest = new
             SendPartitionCurrentMessagesRequest<I, V, E, M>(partitionId, map);
         doRequest(workerInfo, remoteServerAddress, messagesRequest);
         map.clear();
@@ -282,7 +303,7 @@ public class NettyWorkerClient<I extends WritableComparable,
       }
     }
     if (!map.isEmpty()) {
-      WritableRequest messagesRequest = new
+      WritableRequest<I, V, E, M> messagesRequest = new
           SendPartitionCurrentMessagesRequest<I, V, E, M>(partitionId, map);
       doRequest(workerInfo, remoteServerAddress, messagesRequest);
     }
@@ -305,7 +326,7 @@ public class NettyWorkerClient<I extends WritableComparable,
           getInetSocketAddress(partitionOwner.getWorkerInfo(), partitionId);
       Map<I, VertexMutations<I, V, E, M>> partitionMutations =
           sendMutationsCache.removePartitionMutations(partitionId);
-      WritableRequest writableRequest =
+      WritableRequest<I, V, E, M> writableRequest =
           new SendPartitionMutationsRequest<I, V, E, M>(
               partitionId, partitionMutations);
       doRequest(partitionOwner.getWorkerInfo(), remoteServerAddress,
@@ -395,7 +416,7 @@ public class NettyWorkerClient<I extends WritableComparable,
         sendMessageCache.removeAllPartitionMessages();
     for (Entry<Integer, Map<I, Collection<M>>> entry :
         remainingMessageCache.entrySet()) {
-      WritableRequest writableRequest =
+      WritableRequest<I, V, E, M> writableRequest =
           new SendPartitionMessagesRequest<I, V, E, M>(
               entry.getKey(), entry.getValue());
       PartitionOwner partitionOwner =
@@ -413,7 +434,7 @@ public class NettyWorkerClient<I extends WritableComparable,
         sendMutationsCache.removeAllPartitionMutations();
     for (Entry<Integer, Map<I, VertexMutations<I, V, E, M>>> entry :
         remainingMutationsCache.entrySet()) {
-      WritableRequest writableRequest =
+      WritableRequest<I, V, E, M> writableRequest =
           new SendPartitionMutationsRequest<I, V, E, M>(
               entry.getKey(), entry.getValue());
       PartitionOwner partitionOwner =
@@ -445,4 +466,10 @@ public class NettyWorkerClient<I extends WritableComparable,
   public void setup() {
     fixPartitionIdToSocketAddrMap();
   }
+
+  @Override
+  public void authenticate() {
+    nettyClient.authenticate();
+  }
+
 }

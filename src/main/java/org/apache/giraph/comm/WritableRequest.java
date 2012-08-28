@@ -24,11 +24,21 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
+import org.jboss.netty.channel.ChannelHandlerContext;
 
 /**
  * Interface for requests to implement
+ *
+ * @param <I> Vertex id
+ * @param <V> Vertex data
+ * @param <E> Edge data
+ * @param <M> Message data
  */
-public abstract class WritableRequest implements Writable, Configurable {
+@SuppressWarnings("rawtypes")
+public abstract class WritableRequest<I extends WritableComparable,
+    V extends Writable, E extends Writable,
+    M extends Writable> implements Writable, Configurable {
   /** Configuration */
   private Configuration conf;
   /** Client id */
@@ -72,6 +82,14 @@ public abstract class WritableRequest implements Writable, Configurable {
    * @param output Output to write the request to
    */
   abstract void writeRequest(DataOutput output) throws IOException;
+
+  /**
+   * Execute the request
+   *
+   * @param serverData Accessible data that can be mutated per the request
+   */
+  public abstract void doRequest(ServerData<I, V, E, M> serverData,
+                                 ChannelHandlerContext ctx);
 
   @Override
   public final Configuration getConf() {

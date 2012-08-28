@@ -22,7 +22,10 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.MapMaker;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+
+import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -32,25 +35,45 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.giraph.graph.GiraphJob;
+import org.apache.giraph.graph.WorkerInfo;
 import org.apache.giraph.utils.TimedLogger;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.security.TokenCache;
+import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
+import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.SaslRpcServer;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
 import org.apache.log4j.Logger;
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelConfig;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
+import org.jboss.netty.channel.ChannelLocal;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import org.jboss.netty.handler.codec.frame.FixedLengthFrameDecoder;
+import org.jboss.netty.handler.codec.frame.LengthFieldBasedFrameDecoder;
 
 /**
  * Netty client for sending requests.
+ *
+ * @param <I> Vertex id
+ * @param <V> Vertex data
+ * @param <E> Edge data
+ * @param <M> Message data
  */
-public class NettyClient {
+@SuppressWarnings("rawtypes")
+public class NettyClient<I extends WritableComparable,
+    V extends Writable, E extends Writable,
+    M extends Writable> {
   /** Do we have a limit on number of open requests we can have */
   public static final String LIMIT_NUMBER_OF_OPEN_REQUESTS =
       "giraph.waitForRequestsConfirmation";
@@ -113,6 +136,11 @@ public class NettyClient {
       new AddressRequestIdGenerator();
   /** Client id */
   private final int clientId;
+  /** Used to authenticate with other workers acting as servers */
+  public static final ChannelLocal<SaslNettyClient> SASL =
+    new ChannelLocal<SaslNettyClient>();
+  /** Request registry */
+  private final RequestRegistry requestRegistry = new RequestRegistry();
 
   /**
    * Only constructor
@@ -188,15 +216,31 @@ public class NettyClient {
     bootstrap.setOption("sendBufferSize", sendBufferSize);
     bootstrap.setOption("receiveBufferSize", receiveBufferSize);
 
+    // Unlike server-side, client side need only accept SaslTokenMessage,
+    // SaslComplete, and NullReply.
+
+    // Used for the server to send SASL reply tokens to client's tokens.
+    requestRegistry.registerClass(
+      new SaslTokenMessage<I, V, E, M>());
+    // Used to tell client that authentication has completed.
+    requestRegistry.registerClass(
+      new SaslComplete<I, V, E, M>());
+    // Used for all other responses from server to client.
+    requestRegistry.registerClass(
+      new NullReply<I, V, E, M>());
+
+    requestRegistry.shutdown();
+
+
     // Set up the pipeline factory.
     bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
       @Override
       public ChannelPipeline getPipeline() throws Exception {
         return Channels.pipeline(
             byteCounter,
-            new FixedLengthFrameDecoder(RequestServerHandler.RESPONSE_BYTES),
+            new LengthFieldBasedFrameDecoder(1024, 0, 4, 0, 4),
             new RequestEncoder(),
-            new ResponseClientHandler(clientRequestIdRequestInfoMap, conf));
+            new ResponseClientHandler(conf, requestRegistry, clientRequestIdRequestInfoMap));
       }
     });
   }
@@ -249,7 +293,6 @@ public class NettyClient {
       // Start connecting to the remote server up to n time
       for (int i = 0; i < channelsPerServer; ++i) {
         ChannelFuture connectionFuture = bootstrap.connect(address);
-
         waitingConnectionList.add(
             new ChannelFutureAddress(connectionFuture, address));
       }
@@ -311,6 +354,99 @@ public class NettyClient {
           "connectAllAddresses: Too many failures (" + failures + ").");
     }
   }
+
+  public void authenticate() {
+    LOG.debug("nettyClient is authenticating now.");
+    for(InetSocketAddress address: addressChannelMap.keySet()) {
+      LOG.debug("authenticating with address:" + address);
+      ChannelRotater channelRotater = addressChannelMap.get(address);
+      for(Channel channel: channelRotater.getChannels()) {
+        LOG.debug("authenticating channel: " + channel);
+        // add per-channel SaslNettyClient.
+        authenticateOnChannel(channel);
+      }
+    }
+    LOG.debug("nettyClient is done authenticating - continuing with normal " +
+      "business.");
+  }
+
+  public void authenticateOnChannel(Channel channel) {
+    LOG.debug("creating saslNettyClient now for channel: " + channel);
+    try {
+      SaslNettyClient saslNettyClient = new SaslNettyClient(
+        SaslRpcServer.AuthMethod.DIGEST,
+        createJobToken(new Configuration()),null);
+      SASL.set(channel,saslNettyClient);
+
+      LOG.debug("storing saslNettyClient at key: " + channel);
+      LOG.debug("created: " + SASL.get(channel));
+
+      byte[] saslToken = new byte[0];
+      if (saslNettyClient.saslClient.hasInitialResponse()) {
+        saslToken = saslNettyClient.saslClient.evaluateChallenge(saslToken);
+      }
+      SaslTokenMessage<I, V, E, M> saslTokenMessage =
+        new SaslTokenMessage<I, V, E, M>();
+      saslTokenMessage.token = saslToken;
+      sendWritableRequest((InetSocketAddress)channel.getRemoteAddress(),
+        saslTokenMessage);
+
+      // We now wait for Netty's client threads to communicate over this
+      // channel to authenticate with another worker acting as a server.
+      try {
+        LOG.debug("authenticateOnChannel(): waiting for authentication " +
+          "to complete..");
+        synchronized(saslNettyClient.authenticated) {
+          saslNettyClient.authenticated.wait();
+        }
+      } catch (InterruptedException e) {
+        LOG.error("authenticateOnChannel(): interrupted while waiting for " +
+          "authentication.");
+      }
+      LOG.debug("authenticateOnChannel(): Authentication on channel: " +
+        channel + " has completed successfully.");
+
+      // TODO: remove SaslDecoder from client pipeline: we don't need it anymore.
+
+    } catch (IOException e) {
+      LOG.error("authenticateOnChannel() Failed to authenticate with server due to error: " + e);
+    }
+    return;
+  }
+
+  // TODO: move to RequestEncoder or SaslTokenMessage.
+  public void sendSaslToken(WorkerInfo workerInfo,
+                            SocketAddress remoteServer, byte[] token) {
+    LOG.debug("sending sasl token of length: " + token.length +
+      " to remote server: " + remoteServer);
+    SaslTokenMessage saslTokenMessage = new SaslTokenMessage<I, V, E, M>(token);
+    sendWritableRequest(workerInfo.getPartitionId(),
+      (InetSocketAddress) remoteServer, saslTokenMessage);
+    LOG.debug("sent sasl token of length: " + token.length +
+      " to remote server: " + remoteServer);
+  }
+
+  /**
+   * Obtain JobToken, which we'll use as a credential for SASL authentication
+   * when connecting to other Giraph BSPWorkers.
+   */
+  private Token<JobTokenIdentifier> createJobToken(Configuration conf)
+    throws IOException {
+    String localJobTokenFile = System.getenv().get(
+      UserGroupInformation.HADOOP_TOKEN_FILE_LOCATION);
+    if (localJobTokenFile != null) {
+      JobConf jobConf = new JobConf(conf);
+      Credentials credentials =
+        TokenCache.loadTokens(localJobTokenFile, jobConf);
+      return TokenCache.getJobToken(credentials);
+    } else {
+      throw new IOException("Cannot obtain authentication credentials for " +
+        "job: " +
+        "file: '" + UserGroupInformation.HADOOP_TOKEN_FILE_LOCATION +
+        "' not found");
+    }
+  }
+
 
   /**
    * Stop the client.
@@ -401,6 +537,13 @@ public class NettyClient {
         " connect attempts");
   }
 
+  public void sendWritableRequest(InetSocketAddress remoteServer,
+                                  WritableRequest<I, V, E, M> request) {
+    // TODO: avoid this overloading of first argument (destinationWorkerId).
+    // Using -1 to mean: this is a SASL request, not a normal work request.
+    sendWritableRequest(-1, remoteServer, request);
+  }
+
   /**
    * Send a request to a remote server (should be already connected)
    *
@@ -410,8 +553,12 @@ public class NettyClient {
    */
   public void sendWritableRequest(Integer destWorkerId,
                                   InetSocketAddress remoteServer,
-                                  WritableRequest request) {
+                                  WritableRequest<I, V, E, M> request) {
+    LOG.debug("sendWritableRequest (begin):" + destWorkerId + "," + remoteServer +
+      "," + request);
     if (clientRequestIdRequestInfoMap.isEmpty()) {
+      LOG.debug("clientRequestIdRequestInfoMap is empty: " +
+        "calling resetAll()");
       byteCounter.resetAll();
     }
 
@@ -421,13 +568,23 @@ public class NettyClient {
         addressRequestIdGenerator.getNextRequestId(remoteServer));
 
     RequestInfo newRequestInfo = new RequestInfo(remoteServer, request);
-    RequestInfo oldRequestInfo = clientRequestIdRequestInfoMap.putIfAbsent(
-        new ClientRequestId(destWorkerId, request.getRequestId()),
-            newRequestInfo);
-    if (oldRequestInfo != null) {
-      throw new IllegalStateException("sendWritableRequest: Impossible to " +
+    // See TODO: above regarding destWorkerId==-1.
+    if (destWorkerId > -1) {
+      ClientRequestId clientRequestId =
+        new ClientRequestId(destWorkerId, request.getRequestId());
+      LOG.debug("generated ClientRequestId: " + clientRequestId);
+
+      RequestInfo oldRequestInfo = clientRequestIdRequestInfoMap.putIfAbsent(
+        clientRequestId, newRequestInfo);
+      if (oldRequestInfo != null) {
+        throw new IllegalStateException("sendWritableRequest: Impossible to " +
           "have a previous request id = " + request.getRequestId() + ", " +
           "request info of " + oldRequestInfo);
+      }
+    } else {
+      // destWorkerId==-1: we are sending a SASL request to the server.
+      LOG.debug("sendWritableRequest(): not registering request because " +
+        "destWorkerId is less than 0.");
     }
     ChannelFuture writeFuture = channel.write(request);
     newRequestInfo.setWriteFuture(writeFuture);
@@ -461,7 +618,8 @@ public class NettyClient {
    */
   private void waitSomeRequests(int maxOpenRequests) {
     List<ClientRequestId> addedRequestIds = Lists.newArrayList();
-    List<RequestInfo> addedRequestInfos = Lists.newArrayList();
+    List<RequestInfo<I, V, E, M>> addedRequestInfos =
+        Lists.newArrayList();
 
     while (clientRequestIdRequestInfoMap.size() > maxOpenRequests) {
       // Wait for requests to complete for some time
@@ -510,7 +668,7 @@ public class NettyClient {
               "destination = " + writeFuture.getChannel().getRemoteAddress() +
               " " + requestInfo);
           addedRequestIds.add(entry.getKey());
-          addedRequestInfos.add(new RequestInfo(
+          addedRequestInfos.add(new RequestInfo<I, V, E, M>(
               requestInfo.getDestinationAddress(), requestInfo.getRequest()));
         }
       }
@@ -518,7 +676,7 @@ public class NettyClient {
       // Add any new requests to the system, connect if necessary, and re-send
       for (int i = 0; i < addedRequestIds.size(); ++i) {
         ClientRequestId requestId = addedRequestIds.get(i);
-        RequestInfo requestInfo = addedRequestInfos.get(i);
+        RequestInfo<I, V, E, M> requestInfo = addedRequestInfos.get(i);
 
         if (clientRequestIdRequestInfoMap.put(requestId, requestInfo) ==
             null) {

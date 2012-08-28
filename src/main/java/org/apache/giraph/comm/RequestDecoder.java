@@ -19,6 +19,8 @@
 package org.apache.giraph.comm;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
@@ -29,13 +31,23 @@ import org.jboss.netty.handler.codec.oneone.OneToOneDecoder;
 
 /**
  * Decodes encoded requests from the client.
+ *
+ * @param <I> Vertex id
+ * @param <V> Vertex data
+ * @param <E> Edge data
+ * @param <M> Message data
  */
-public class RequestDecoder extends OneToOneDecoder {
+@SuppressWarnings("rawtypes")
+public class RequestDecoder<I extends WritableComparable,
+    V extends Writable, E extends Writable,
+    M extends Writable> extends OneToOneDecoder {
   /** Class logger */
   private static final Logger LOG =
       Logger.getLogger(RequestDecoder.class);
   /** Configuration */
   private final Configuration conf;
+  /** Registry of requests */
+  private final RequestRegistry requestRegistry;
   /** Byte counter to output */
   private final ByteCounter byteCounter;
 
@@ -43,10 +55,14 @@ public class RequestDecoder extends OneToOneDecoder {
    * Constructor.
    *
    * @param conf Configuration
+   * @param requestRegistry Request registry
    * @param byteCounter Keeps track of the decoded bytes
    */
-  public RequestDecoder(Configuration conf, ByteCounter byteCounter) {
+  public RequestDecoder(
+      Configuration conf, RequestRegistry requestRegistry,
+      ByteCounter byteCounter) {
     this.conf = conf;
+    this.requestRegistry = requestRegistry;
     this.byteCounter = byteCounter;
   }
 
@@ -72,9 +88,11 @@ public class RequestDecoder extends OneToOneDecoder {
     if (LOG.isDebugEnabled()) {
       LOG.debug("decode: Got a request of type " + type);
     }
-    Class<? extends WritableRequest> writableRequestClass =
-        type.getRequestClass();
-    WritableRequest writableRequest =
+    @SuppressWarnings("unchecked")
+    Class<? extends WritableRequest<I, V, E, M>> writableRequestClass =
+        (Class<? extends WritableRequest<I, V, E, M>>)
+        requestRegistry.getClass(type);
+    WritableRequest<I, V, E, M> writableRequest =
         ReflectionUtils.newInstance(writableRequestClass, conf);
     writableRequest.readFields(inputStream);
     return writableRequest;

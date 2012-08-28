@@ -23,6 +23,7 @@ import org.apache.giraph.comm.SendPartitionMessagesRequest;
 import org.apache.giraph.comm.ServerData;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+import org.jboss.netty.channel.ChannelHandlerContext;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -60,7 +61,8 @@ public class SendPartitionCurrentMessagesRequest<I extends WritableComparable,
   }
 
   @Override
-  public void doRequest(ServerData<I, V, E, M> serverData) {
+  public void doRequest(ServerData<I, V, E, M> serverData,
+                        ChannelHandlerContext ctx) {
     try {
       serverData.getCurrentMessageStore().addPartitionMessages(
           getVertexIdMessages(), getPartitionId());

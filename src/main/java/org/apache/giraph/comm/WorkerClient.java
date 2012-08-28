@@ -123,4 +123,7 @@ public interface WorkerClient<I extends WritableComparable,
    * @throws IOException
    */
   void closeConnections() throws IOException;
+
+  void authenticate() throws IOException;
+
 }

@@ -35,7 +35,17 @@ public enum RequestType {
   SEND_PARTITION_CURRENT_MESSAGES_REQUEST
       (SendPartitionCurrentMessagesRequest.class),
   /** Send a partition of mutations */
-  SEND_PARTITION_MUTATIONS_REQUEST(SendPartitionMutationsRequest.class);
+  SEND_PARTITION_MUTATIONS_REQUEST(SendPartitionMutationsRequest.class),
+
+  /** Exchange authentication information between clients and servers */
+  SASL_TOKEN_MESSAGE(SaslTokenMessage.class),
+
+  /** Used by server to acknowledge successful authentication with client. */
+  SASL_COMPLETE(SaslComplete.class),
+
+  /** Used by servers to acknowledge requests from client */
+  NULL_REPLY(NullReply.class);
+
 
   /** Class of request which this type corresponds to */
   private final Class<? extends WritableRequest> requestClass;

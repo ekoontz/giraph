@@ -18,20 +18,40 @@
 
 package org.apache.giraph.comm;
 
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
+import java.util.Collection;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
+import org.apache.giraph.comm.messages.SendPartitionCurrentMessagesRequest;
 import org.apache.giraph.graph.GiraphJob;
-import org.apache.giraph.comm.RequestServerHandler.RequestServerHandlerFactory;
+import org.apache.giraph.hadoop.BspTokenSelector;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapreduce.security.TokenCache;
+import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
+import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
+import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.security.token.TokenInfo;
 import org.apache.log4j.Logger;
 import org.jboss.netty.bootstrap.ServerBootstrap;
+
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.channel.ChannelFactory;
+import org.jboss.netty.channel.ChannelLocal;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.Channels;
@@ -44,7 +64,14 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * This server uses Netty and will implement all Giraph communication
+ *
+ * @param <I> Vertex id
+ * @param <V> Vertex data
+ * @param <E> Edge data
+ * @param <M> Message data
  */
+@SuppressWarnings("rawtypes")
+@TokenInfo(BspTokenSelector.class)
 public class NettyServer {
   /** Default maximum thread pool size */
   public static final int MAXIMUM_THREAD_POOL_SIZE_DEFAULT = 32;
@@ -56,6 +83,8 @@ public class NettyServer {
   private ChannelFactory channelFactory;
   /** Accepted channels */
   private final ChannelGroup accepted = new DefaultChannelGroup();
+  /** Worker thread pool (if implemented as a ThreadPoolExecutor) */
+  private ThreadPoolExecutor workerThreadPool = null;
   /** Local hostname */
   private final String localHostname;
   /** Address of the server */
@@ -64,8 +93,8 @@ public class NettyServer {
   private final int maximumPoolSize;
   /** TCP backlog */
   private final int tcpBacklog;
-  /** Factory for {@link RequestServerHandler} */
-  private final RequestServerHandlerFactory requestServerHandlerFactory;
+  /** Request reqistry */
+  private final RequestRegistry requestRegistry = new RequestRegistry();
   /** Server bootstrap */
   private ServerBootstrap bootstrap;
   /** Byte counter for this client */
@@ -80,17 +109,34 @@ public class NettyServer {
   private final ExecutorService workerExecutorService;
   /** Request completed map per worker */
   private final WorkerRequestReservedMap workerRequestReservedMap;
+  /** Used to authenticate with netty clients */
+  public static final ChannelLocal<SaslNettyServer> channelSaslNettyServers =
+    new ChannelLocal<SaslNettyServer>();
+
+  private RequestServerHandler.RequestServerHandlerFactory requestServerHandlerFactory;
 
   /**
    * Constructor for creating the server
    *
    * @param conf Configuration to use
-   * @param requestServerHandlerFactory Factory for request handlers
    */
   public NettyServer(Configuration conf,
-      RequestServerHandlerFactory requestServerHandlerFactory) {
+                     RequestServerHandler.RequestServerHandlerFactory
+                       requestServerHandlerFactory) {
     this.conf = conf;
     this.requestServerHandlerFactory = requestServerHandlerFactory;
+
+    requestRegistry.registerClass(
+      new SendVertexRequest());
+    requestRegistry.registerClass(
+        new SendPartitionMessagesRequest());
+    requestRegistry.registerClass(
+        new SendPartitionMutationsRequest());
+    requestRegistry.registerClass(
+    new SendPartitionCurrentMessagesRequest());
+    requestRegistry.registerClass(
+        new SaslTokenMessage());
+    requestRegistry.shutdown();
 
     sendBufferSize = conf.getInt(GiraphJob.SERVER_SEND_BUFFER_SIZE,
         GiraphJob.DEFAULT_SERVER_SEND_BUFFER_SIZE);
@@ -140,18 +186,18 @@ public class NettyServer {
         return Channels.pipeline(
             byteCounter,
             new LengthFieldBasedFrameDecoder(1024 * 1024 * 1024, 0, 4, 0, 4),
-            new RequestDecoder(conf, byteCounter),
-            requestServerHandlerFactory.newHandler(workerRequestReservedMap,
-                conf));
+            new RequestDecoder(conf, requestRegistry, byteCounter),
+            requestServerHandlerFactory.newHandler(
+                workerRequestReservedMap, conf),
+            new ResponseEncoder());
       }
     });
 
     int taskId = conf.getInt("mapred.task.partition", -1);
     int numTasks = conf.getInt("mapred.map.tasks", 1);
-    // number of workers + 1 for master
-    int numServers = conf.getInt(GiraphJob.MAX_WORKERS, numTasks) + 1;
+    int numWorkers = conf.getInt(GiraphJob.MAX_WORKERS, numTasks);
     int portIncrementConstant =
-        (int) Math.pow(10, Math.ceil(Math.log10(numServers)));
+        (int) Math.pow(10, Math.ceil(Math.log10(numWorkers)));
     int bindPort = conf.getInt(GiraphJob.RPC_INITIAL_PORT,
         GiraphJob.RPC_INITIAL_PORT_DEFAULT) +
         taskId;
@@ -219,7 +265,6 @@ public class NettyServer {
     bossExecutorService.shutdownNow();
     workerExecutorService.shutdownNow();
     bootstrap.releaseExternalResources();
-    channelFactory.releaseExternalResources();
   }
 
   public InetSocketAddress getMyAddress() {

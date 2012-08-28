@@ -1299,6 +1299,12 @@ public abstract class BasicRPCCommunications<I extends WritableComparable,
   }
 
   @Override
+  public void authenticate() {
+    // nothing done here if using Hadoop RPC: authentication is
+    // handled at Hadoop library-level
+  }
+
+  @Override
   public String getName() {
     return myName;
   }

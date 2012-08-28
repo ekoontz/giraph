@@ -46,7 +46,7 @@ public class WorkerRequestServerHandler<I extends WritableComparable,
   public WorkerRequestServerHandler(ServerData<I, V, E, M> serverData,
       WorkerRequestReservedMap workerRequestReservedMap,
       Configuration conf) {
-    super(workerRequestReservedMap, conf);
+    super(serverData, workerRequestReservedMap, conf);
     this.serverData = serverData;
   }
 

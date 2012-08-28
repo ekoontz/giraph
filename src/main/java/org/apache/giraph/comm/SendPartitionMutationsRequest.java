@@ -32,6 +32,7 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.log4j.Logger;
 
 import com.google.common.collect.Maps;
+import org.jboss.netty.channel.ChannelHandlerContext;
 
 /**
  * Send a collection of vertex mutations for a partition.
@@ -43,8 +44,8 @@ import com.google.common.collect.Maps;
  */
 @SuppressWarnings("rawtypes")
 public class SendPartitionMutationsRequest<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable> extends
-    WritableRequest implements WorkerRequest<I, V, E, M> {
+    V extends Writable, E extends Writable,
+    M extends Writable> extends WritableRequest<I, V, E, M> {
   /** Class logger */
   private static final Logger LOG =
       Logger.getLogger(SendPartitionMutationsRequest.class);
@@ -107,7 +108,8 @@ public class SendPartitionMutationsRequest<I extends WritableComparable,
   }
 
   @Override
-  public void doRequest(ServerData<I, V, E, M> serverData) {
+  public void doRequest(ServerData<I, V, E, M> serverData,
+                        ChannelHandlerContext ctx) {
     ConcurrentHashMap<I, VertexMutations<I, V, E, M>> vertexMutations =
       serverData.getVertexMutations();
     for (Entry<I, VertexMutations<I, V, E, M>> entry :

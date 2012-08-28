@@ -25,6 +25,7 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.log4j.Logger;
 
 import com.google.common.collect.Lists;
+import org.jboss.netty.channel.ChannelHandlerContext;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -41,8 +42,8 @@ import java.util.Collection;
  */
 @SuppressWarnings("rawtypes")
 public class SendVertexRequest<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable> extends
-    WritableRequest implements WorkerRequest<I, V, E, M> {
+    V extends Writable, E extends Writable,
+    M extends Writable> extends WritableRequest<I, V, E, M> {
   /** Class logger */
   private static final Logger LOG =
       Logger.getLogger(SendVertexRequest.class);
@@ -95,11 +96,8 @@ public class SendVertexRequest<I extends WritableComparable,
   }
 
   @Override
-  public void doRequest(ServerData<I, V, E, M> serverData) {
-    if (vertices.isEmpty()) {
-      LOG.warn("doRequest: Got an empty request!");
-      return;
-    }
+  public void doRequest(ServerData<I, V, E, M> serverData,
+                        ChannelHandlerContext ctx) {
     serverData.getPartitionStore().addPartitionVertices(partitionId,
         vertices);
   }

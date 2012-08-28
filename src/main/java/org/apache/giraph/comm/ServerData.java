@@ -21,6 +21,7 @@ package org.apache.giraph.comm;
 import org.apache.giraph.comm.messages.MessageStoreByPartition;
 import org.apache.giraph.comm.messages.MessageStoreFactory;
 import org.apache.giraph.graph.GiraphJob;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexMutations;
 import org.apache.giraph.graph.partition.DiskBackedPartitionStore;
 import org.apache.giraph.graph.partition.PartitionStore;
@@ -28,8 +29,18 @@ import org.apache.giraph.graph.partition.SimplePartitionStore;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapreduce.security.TokenCache;
+import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
+import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
+import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.log4j.Logger;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -43,6 +54,9 @@ import java.util.concurrent.ConcurrentHashMap;
 @SuppressWarnings("rawtypes")
 public class ServerData<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable> {
+  /** Class logger */
+  private static final Logger LOG = Logger.getLogger(ServerData.class);
+
   /** Partition store for this worker. */
   private volatile PartitionStore<I, V, E, M> partitionStore;
   /** Message store factory */
@@ -64,6 +78,11 @@ public class ServerData<I extends WritableComparable,
    */
   private final ConcurrentHashMap<I, VertexMutations<I, V, E, M>>
   vertexMutations = new ConcurrentHashMap<I, VertexMutations<I, V, E, M>>();
+  /**
+   * Used to store secret shared with clients so that we can authenticate
+   * them.
+   */
+  public JobTokenSecretManager secretManager = new JobTokenSecretManager();
 
   /**
    * Constructor.
@@ -83,6 +102,50 @@ public class ServerData<I extends WritableComparable,
       partitionStore = new DiskBackedPartitionStore<I, V, E, M>(configuration);
     } else {
       partitionStore = new SimplePartitionStore<I, V, E, M>(configuration);
+    }
+
+    LOG.debug("starting initializing SASL server..");
+    SaslNettyServer.init(configuration);
+    LOG.debug("done initializing SASL server.");
+
+    LOG.debug("initializing secret manager..");
+    String localJobTokenFile = System.getenv().get(
+      UserGroupInformation.HADOOP_TOKEN_FILE_LOCATION);
+    if (localJobTokenFile != null) {
+      JobConf jobConf = new JobConf(configuration);
+      try {
+        LOG.debug("loading credentials from localJobTokenFile: " +
+          localJobTokenFile);
+        Credentials credentials =
+          TokenCache.loadTokens(localJobTokenFile, jobConf);
+        LOG.debug("credentials loaded are: " + credentials);
+        LOG.debug("credentials size: " + credentials.numberOfTokens());
+        Collection<Token<? extends TokenIdentifier>> collection =
+          credentials.getAllTokens();
+        for(Token<? extends TokenIdentifier> token:  collection) {
+          TokenIdentifier tokenIdentifier = token.decodeIdentifier();
+          LOG.debug("token loaded:" + token);
+          LOG.debug("tokenIdentifier:" + tokenIdentifier);
+          if (tokenIdentifier instanceof JobTokenIdentifier) {
+            Token<JobTokenIdentifier> theToken =
+              (Token<JobTokenIdentifier>)token;
+            JobTokenIdentifier jobTokenIdentifier =
+              (JobTokenIdentifier)tokenIdentifier;
+            LOG.debug("cast to job token identifier: " + jobTokenIdentifier);
+            secretManager.addTokenForJob(
+              jobTokenIdentifier.getJobId().toString(), theToken);
+            LOG.debug("JobID: " + jobTokenIdentifier.getJobId());
+            LOG.debug("Password for jobTokenIdentifier:" +
+              secretManager.retrievePassword(jobTokenIdentifier));
+          } else {
+            LOG.debug("ignoring non-JobTokenIdentifier: " + tokenIdentifier);
+          }
+        }
+        LOG.debug("loaded credentials.");
+      } catch (IOException e) {
+        LOG.error("failed to load tokens:" + e);
+      }
+      LOG.debug("done initializing secret manager.");
     }
   }
 

@@ -20,6 +20,8 @@ package org.apache.giraph.comm;
 
 import org.apache.giraph.graph.GiraphJob;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
 import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -34,8 +36,7 @@ import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
  *
  * @param <R> Request type
  */
-public abstract class RequestServerHandler<R> extends
-    SimpleChannelUpstreamHandler {
+public abstract class RequestServerHandler<R> extends SimpleChannelUpstreamHandler {
   /** Number of bytes in the encoded response */
   public static final int RESPONSE_BYTES = 13;
   /** Class logger */
@@ -45,20 +46,25 @@ public abstract class RequestServerHandler<R> extends
   private static volatile boolean ALREADY_CLOSED_FIRST_REQUEST = false;
   /** Close connection on first request (used for simulating failure) */
   private final boolean closeFirstRequest;
+  /** Data that can be accessed for handling requests */
+  private final ServerData serverData;
   /** Request reserved map (for exactly one semantics) */
   private final WorkerRequestReservedMap workerRequestReservedMap;
   /** My worker id */
   private final int myWorkerId;
 
   /**
-   * Constructor
+   * Constructor with external server data
    *
+   * @param serverData Data held by the server
    * @param workerRequestReservedMap Worker request reservation map
    * @param conf Configuration
    */
   public RequestServerHandler(
+      ServerData serverData,
       WorkerRequestReservedMap workerRequestReservedMap,
       Configuration conf) {
+    this.serverData = serverData;
     this.workerRequestReservedMap = workerRequestReservedMap;
     closeFirstRequest = conf.getBoolean(
         GiraphJob.NETTY_SIMULATE_FIRST_REQUEST_CLOSED,
@@ -73,8 +79,9 @@ public abstract class RequestServerHandler<R> extends
       LOG.debug("messageReceived: Got " + e.getMessage().getClass());
     }
 
-    WritableRequest writableRequest = (WritableRequest) e.getMessage();
-
+    @SuppressWarnings("unchecked")
+    WritableRequest writableRequest =
+        (WritableRequest) e.getMessage();
     // Simulate a closed connection on the first request (if desired)
     if (closeFirstRequest && !ALREADY_CLOSED_FIRST_REQUEST) {
       LOG.info("messageReceived: Simulating closing channel on first " +
@@ -85,13 +92,53 @@ public abstract class RequestServerHandler<R> extends
       return;
     }
 
+    // TODO: add a separate pipeline component here on server-side, called
+    // SaslServerCodec, dedicated to handling SASL interaction with clients.
+    if (writableRequest.getType() == RequestType.SASL_TOKEN_MESSAGE) {
+      // initialize server-side SASL functionality.
+      SaslNettyServer saslNettyServer = NettyServer.channelSaslNettyServers.get(ctx.getChannel());
+      if (saslNettyServer == null) {
+        LOG.debug("No saslNettyServer for " + ctx.getChannel() +
+          " yet; creating now, with secret manager: " + serverData.secretManager);
+        saslNettyServer = new SaslNettyServer(serverData.secretManager);
+        NettyServer.channelSaslNettyServers.set(ctx.getChannel(),saslNettyServer);
+      } else {
+        LOG.debug("Found existing saslNettyServer on server:" +
+          ctx.getChannel().getLocalAddress() + " for client " +
+          ctx.getChannel().getRemoteAddress());
+      }
+      LOG.debug("messageReceived(): No accounting is being done on " +
+        "SASL messages (yet): calling doRequest() and returning.");
+      writableRequest.doRequest(serverData,ctx);
+      return;
+    }
+
     // Only execute this request exactly once
     int alreadyDone = 1;
     if (workerRequestReservedMap.reserveRequest(
         writableRequest.getClientId(),
         writableRequest.getRequestId())) {
-      processRequest((R) writableRequest);
-      alreadyDone = 0;
+
+      // Do authorization: is this client allowed to doRequest() on this server?
+      SaslNettyServer saslNettyServer =
+        NettyServer.channelSaslNettyServers.get(ctx.getChannel());
+      if (saslNettyServer == null) {
+              LOG.warn("This client is not authorized to perform this action " +
+                "since there's no saslNettyServer for it.");
+      } else {
+        if (saslNettyServer.isComplete() != true) {
+          LOG.warn("This client is not authorized to perform this action " +
+            "because SASL authentication did not complete.");
+        } else {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("messageReceived(): authenticated client: " +
+              saslNettyServer.getUserName() + " is authorized to do request " +
+              "on server.");
+          }
+          writableRequest.doRequest(serverData, ctx);
+          alreadyDone = 0;
+        }
+      }
     } else {
       LOG.info("messageReceived: Request id " +
           writableRequest.getRequestId() + " from client " +
@@ -100,12 +147,11 @@ public abstract class RequestServerHandler<R> extends
           "not processing again.");
     }
 
-    // Send the response with the request id
-    ChannelBuffer buffer = ChannelBuffers.directBuffer(RESPONSE_BYTES);
-    buffer.writeInt(myWorkerId);
-    buffer.writeLong(writableRequest.getRequestId());
-    buffer.writeByte(alreadyDone);
-    e.getChannel().write(buffer);
+    NullReply nullReply = new NullReply();
+    nullReply.setWorkerId(myWorkerId);
+    nullReply.setRequestId(writableRequest.getRequestId());
+    nullReply.setAlreadyDone(alreadyDone);
+    e.getChannel().write(nullReply);
   }
 
   /**
@@ -152,7 +198,7 @@ public abstract class RequestServerHandler<R> extends
      * @return New {@link RequestServerHandler}
      */
     RequestServerHandler newHandler(
-        WorkerRequestReservedMap workerRequestReservedMap,
-        Configuration conf);
+      WorkerRequestReservedMap workerRequestReservedMap,
+      Configuration conf);
   }
 }

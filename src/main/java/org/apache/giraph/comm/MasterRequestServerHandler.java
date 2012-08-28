@@ -30,8 +30,10 @@ public class MasterRequestServerHandler extends
    * @param conf                     Configuration
    */
   public MasterRequestServerHandler(
-      WorkerRequestReservedMap workerRequestReservedMap, Configuration conf) {
-    super(workerRequestReservedMap, conf);
+    WorkerRequestReservedMap workerRequestReservedMap,
+    Configuration conf) {
+    // note that first param, (ServerData) to super's constructor is null.
+    super(null, workerRequestReservedMap, conf);
   }
 
   @Override
