@@ -67,7 +67,8 @@ public class NettyWorkerClient<I extends WritableComparable,
   private final NettyClient nettyClient;
   /** Centralized service, needed to get vertex ranges */
   private final CentralizedServiceWorker<I, V, E, M> service;
-  /** to remote socket address.
+  /**
+   * Cached map of partition ids to remote socket address.
    */
   private final Map<Integer, InetSocketAddress> partitionIndexAddressMap =
       new ConcurrentHashMap<Integer, InetSocketAddress>();
@@ -119,23 +120,12 @@ public class NettyWorkerClient<I extends WritableComparable,
   public void fixPartitionIdToSocketAddrMap() {
     // 1. Fix all the cached inet addresses (remove all changed entries)
     // 2. Connect to any new RPC servers
-    LOG.debug("fixPartitionIdToSocketAddrMap() is starting now.");
-
     Set<InetSocketAddress> addresses =
         Sets.newHashSetWithExpectedSize(service.getPartitionOwners().size());
     for (PartitionOwner partitionOwner : service.getPartitionOwners()) {
       InetSocketAddress address =
           partitionIndexAddressMap.get(
               partitionOwner.getPartitionId());
-
-      if (address != null) {
-        LOG.debug("found existing address: " + address + " for partition: " +
-          partitionOwner.getPartitionId());
-      } else {
-        LOG.debug("no address for partition:" +
-          partitionOwner.getPartitionId());
-      }
-
       if (address != null &&
           (!address.getHostName().equals(
               partitionOwner.getWorkerInfo().getHostname()) ||
