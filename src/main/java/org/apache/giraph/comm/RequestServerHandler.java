@@ -36,7 +36,8 @@ import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
  *
  * @param <R> Request type
  */
-public abstract class RequestServerHandler<R> extends SimpleChannelUpstreamHandler {
+public abstract class RequestServerHandler<R> extends
+    SimpleChannelUpstreamHandler {
   /** Number of bytes in the encoded response */
   public static final int RESPONSE_BYTES = 13;
   /** Class logger */
@@ -56,7 +57,8 @@ public abstract class RequestServerHandler<R> extends SimpleChannelUpstreamHandl
   /**
    * Constructor with external server data
    *
-   * @param serverData Data held by the server
+   * @param serverData Data held by the server: contains secretManager which
+   *                   is used in messageReceived() to authenticate clients.
    * @param workerRequestReservedMap Worker request reservation map
    * @param conf Configuration
    */
@@ -79,9 +81,7 @@ public abstract class RequestServerHandler<R> extends SimpleChannelUpstreamHandl
       LOG.debug("messageReceived: Got " + e.getMessage().getClass());
     }
 
-    @SuppressWarnings("unchecked")
-    WritableRequest writableRequest =
-        (WritableRequest) e.getMessage();
+    WritableRequest writableRequest = (WritableRequest) e.getMessage();
     // Simulate a closed connection on the first request (if desired)
     if (closeFirstRequest && !ALREADY_CLOSED_FIRST_REQUEST) {
       LOG.info("messageReceived: Simulating closing channel on first " +
@@ -198,7 +198,7 @@ public abstract class RequestServerHandler<R> extends SimpleChannelUpstreamHandl
      * @return New {@link RequestServerHandler}
      */
     RequestServerHandler newHandler(
-      WorkerRequestReservedMap workerRequestReservedMap,
-      Configuration conf);
+        WorkerRequestReservedMap workerRequestReservedMap,
+        Configuration conf);
   }
 }
