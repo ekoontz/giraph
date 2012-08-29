@@ -64,13 +64,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * This server uses Netty and will implement all Giraph communication
- *
- * @param <I> Vertex id
- * @param <V> Vertex data
- * @param <E> Edge data
- * @param <M> Message data
  */
-@SuppressWarnings("rawtypes")
 @TokenInfo(BspTokenSelector.class)
 public class NettyServer {
   /** Default maximum thread pool size */
