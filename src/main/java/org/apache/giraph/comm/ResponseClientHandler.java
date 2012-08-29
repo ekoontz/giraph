@@ -51,7 +51,7 @@ public class ResponseClientHandler extends OneToOneDecoder {
   private final boolean dropFirstResponse;
   /** Outstanding worker request map */
   private final ConcurrentMap<ClientRequestId, RequestInfo>
-    workerIdOutstandingRequestMap;
+  workerIdOutstandingRequestMap;
 
   /**
    * Constructor.
