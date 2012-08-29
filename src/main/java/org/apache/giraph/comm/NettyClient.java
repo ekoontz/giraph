@@ -206,9 +206,6 @@ public class NettyClient {
     bootstrap.setOption("sendBufferSize", sendBufferSize);
     bootstrap.setOption("receiveBufferSize", receiveBufferSize);
 
-    // Unlike server-side, client side need only accept SaslTokenMessage,
-    // SaslComplete, and NullReply.
-
     // Set up the pipeline factory.
     bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
       @Override
@@ -217,7 +214,7 @@ public class NettyClient {
             byteCounter,
             new LengthFieldBasedFrameDecoder(1024, 0, 4, 0, 4),
             new RequestEncoder(),
-            new ResponseClientHandler(conf, clientRequestIdRequestInfoMap));
+            new ResponseClientHandler(clientRequestIdRequestInfoMap, conf));
       }
     });
   }
@@ -270,6 +267,7 @@ public class NettyClient {
       // Start connecting to the remote server up to n time
       for (int i = 0; i < channelsPerServer; ++i) {
         ChannelFuture connectionFuture = bootstrap.connect(address);
+
         waitingConnectionList.add(
             new ChannelFutureAddress(connectionFuture, address));
       }
@@ -531,11 +529,7 @@ public class NettyClient {
   public void sendWritableRequest(Integer destWorkerId,
                                   InetSocketAddress remoteServer,
                                   WritableRequest request) {
-    LOG.debug("sendWritableRequest (begin):" + destWorkerId + "," + remoteServer +
-      "," + request);
     if (clientRequestIdRequestInfoMap.isEmpty()) {
-      LOG.debug("clientRequestIdRequestInfoMap is empty: " +
-        "calling resetAll()");
       byteCounter.resetAll();
     }
 
