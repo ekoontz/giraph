@@ -42,8 +42,8 @@ public class RequestEncoder extends OneToOneEncoder {
       throw new IllegalArgumentException(
           "encode: Got a message of type " + msg.getClass());
     }
-    WritableRequest writableRequest =
-        (WritableRequest) msg;
+    @SuppressWarnings("unchecked")
+    WritableRequest writableRequest = (WritableRequest) msg;
     ChannelBufferOutputStream outputStream =
         new ChannelBufferOutputStream(ChannelBuffers.dynamicBuffer(
             10, ctx.getChannel().getConfig().getBufferFactory()));
