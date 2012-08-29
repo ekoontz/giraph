@@ -44,8 +44,8 @@ import org.jboss.netty.channel.ChannelHandlerContext;
  */
 @SuppressWarnings("rawtypes")
 public class SendPartitionMutationsRequest<I extends WritableComparable,
-    V extends Writable, E extends Writable,
-    M extends Writable> extends WritableRequest<I, V, E, M> {
+    V extends Writable, E extends Writable, M extends Writable> extends
+    WritableRequest<I, V, E, M> {
   /** Class logger */
   private static final Logger LOG =
       Logger.getLogger(SendPartitionMutationsRequest.class);
