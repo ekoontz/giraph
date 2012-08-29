@@ -618,8 +618,7 @@ public class NettyClient<I extends WritableComparable,
    */
   private void waitSomeRequests(int maxOpenRequests) {
     List<ClientRequestId> addedRequestIds = Lists.newArrayList();
-    List<RequestInfo<I, V, E, M>> addedRequestInfos =
-        Lists.newArrayList();
+    List<RequestInfo> addedRequestInfos = Lists.newArrayList();
 
     while (clientRequestIdRequestInfoMap.size() > maxOpenRequests) {
       // Wait for requests to complete for some time
@@ -668,7 +667,7 @@ public class NettyClient<I extends WritableComparable,
               "destination = " + writeFuture.getChannel().getRemoteAddress() +
               " " + requestInfo);
           addedRequestIds.add(entry.getKey());
-          addedRequestInfos.add(new RequestInfo<I, V, E, M>(
+          addedRequestInfos.add(new RequestInfo(
               requestInfo.getDestinationAddress(), requestInfo.getRequest()));
         }
       }
@@ -676,7 +675,7 @@ public class NettyClient<I extends WritableComparable,
       // Add any new requests to the system, connect if necessary, and re-send
       for (int i = 0; i < addedRequestIds.size(); ++i) {
         ClientRequestId requestId = addedRequestIds.get(i);
-        RequestInfo<I, V, E, M> requestInfo = addedRequestInfos.get(i);
+        RequestInfo requestInfo = addedRequestInfos.get(i);
 
         if (clientRequestIdRequestInfoMap.put(requestId, requestInfo) ==
             null) {
