@@ -19,8 +19,6 @@
 package org.apache.giraph.comm;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
@@ -45,11 +43,9 @@ public class RequestDecoder extends OneToOneDecoder {
    * Constructor.
    *
    * @param conf Configuration
-   * @param requestRegistry Request registry
    * @param byteCounter Keeps track of the decoded bytes
    */
-  public RequestDecoder(
-      Configuration conf, ByteCounter byteCounter) {
+  public RequestDecoder(Configuration conf, ByteCounter byteCounter) {
     this.conf = conf;
     this.byteCounter = byteCounter;
   }
