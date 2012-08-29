@@ -64,7 +64,7 @@ public class NettyWorkerClient<I extends WritableComparable,
   /** Hadoop configuration */
   private final Configuration conf;
   /** Netty client that does that actual I/O */
-  private final NettyClient<I, V, E, M> nettyClient;
+  private final NettyClient nettyClient;
   /** Centralized service, needed to get vertex ranges */
   private final CentralizedServiceWorker<I, V, E, M> service;
   /** to remote socket address.
@@ -100,7 +100,7 @@ public class NettyWorkerClient<I extends WritableComparable,
   public NettyWorkerClient(Mapper<?, ?, ?, ?>.Context context,
                            CentralizedServiceWorker<I, V, E, M> service,
                            ServerData<I, V, E, M> serverData) {
-    this.nettyClient = new NettyClient<I, V, E, M>(context);
+    this.nettyClient = new NettyClient(context);
     this.conf = context.getConfiguration();
     this.service = service;
     maxMessagesPerPartition = conf.getInt(GiraphJob.MSG_SIZE,
