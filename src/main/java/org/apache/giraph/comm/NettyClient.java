@@ -131,8 +131,6 @@ public class NettyClient {
   /** Used to authenticate with other workers acting as servers */
   public static final ChannelLocal<SaslNettyClient> SASL =
     new ChannelLocal<SaslNettyClient>();
-  /** Request registry */
-  private final RequestRegistry requestRegistry = new RequestRegistry();
 
   /**
    * Only constructor
@@ -211,19 +209,6 @@ public class NettyClient {
     // Unlike server-side, client side need only accept SaslTokenMessage,
     // SaslComplete, and NullReply.
 
-    // Used for the server to send SASL reply tokens to client's tokens.
-    requestRegistry.registerClass(
-      new SaslTokenMessage());
-    // Used to tell client that authentication has completed.
-    requestRegistry.registerClass(
-      new SaslComplete());
-    // Used for all other responses from server to client.
-    requestRegistry.registerClass(
-      new NullReply());
-
-    requestRegistry.shutdown();
-
-
     // Set up the pipeline factory.
     bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
       @Override
@@ -232,7 +217,7 @@ public class NettyClient {
             byteCounter,
             new LengthFieldBasedFrameDecoder(1024, 0, 4, 0, 4),
             new RequestEncoder(),
-            new ResponseClientHandler(conf, requestRegistry, clientRequestIdRequestInfoMap));
+            new ResponseClientHandler(conf, clientRequestIdRequestInfoMap));
       }
     });
   }

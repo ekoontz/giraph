@@ -42,9 +42,6 @@ public class ResponseClientHandler extends OneToOneDecoder {
       Logger.getLogger(ResponseClientHandler.class);
   /** Configuration */
   private final Configuration conf;
-  /** Registry of requests */
-  private final RequestRegistry requestRegistry;
-
   /** Already dropped first response? (used if dropFirstResponse == true) */
   private static volatile boolean ALREADY_DROPPED_FIRST_RESPONSE = false;
   /** Drop first response (used for simulating failure) */
@@ -57,13 +54,11 @@ public class ResponseClientHandler extends OneToOneDecoder {
    * Constructor.
    *
    * @param conf Configuration
-   * @param requestRegistry registry
    */
-  public ResponseClientHandler(Configuration conf, RequestRegistry requestRegistry,
+  public ResponseClientHandler(Configuration conf,
                                ConcurrentMap<ClientRequestId, RequestInfo>
                                    workerIdOutstandingRequestMap) {
     this.conf = conf;
-    this.requestRegistry = requestRegistry;
     this.workerIdOutstandingRequestMap = workerIdOutstandingRequestMap;
     dropFirstResponse = conf.getBoolean(
         GiraphJob.NETTY_SIMULATE_FIRST_RESPONSE_FAILED,
@@ -248,8 +243,8 @@ public class ResponseClientHandler extends OneToOneDecoder {
 
     // 3. create object of this type, into which we will deserialize 
     // the inputStream's data.
-        Class<? extends WritableRequest> writableRequestClass =
-        requestRegistry.getClass(type);
+    Class<? extends WritableRequest> writableRequestClass =
+        type.getRequestClass();
 
     LOG.debug("decode(): writableRequestClass: " + writableRequestClass +
       " found for type:" + type);
