@@ -406,8 +406,8 @@ public class NettyWorkerClient<I extends WritableComparable,
         sendMessageCache.removeAllPartitionMessages();
     for (Entry<Integer, Map<I, Collection<M>>> entry :
         remainingMessageCache.entrySet()) {
-      WritableRequest<I, V, E, M> writableRequest =
-          new SendPartitionMessagesRequest<I, V, E, M>(
+      WritableRequest writableRequest =
+          new SendPartitionMessagesRequest(
               entry.getKey(), entry.getValue());
       PartitionOwner partitionOwner =
           service.getVertexPartitionOwner(
@@ -424,8 +424,8 @@ public class NettyWorkerClient<I extends WritableComparable,
         sendMutationsCache.removeAllPartitionMutations();
     for (Entry<Integer, Map<I, VertexMutations<I, V, E, M>>> entry :
         remainingMutationsCache.entrySet()) {
-      WritableRequest<I, V, E, M> writableRequest =
-          new SendPartitionMutationsRequest<I, V, E, M>(
+      WritableRequest writableRequest =
+          new SendPartitionMutationsRequest(
               entry.getKey(), entry.getValue());
       PartitionOwner partitionOwner =
           service.getVertexPartitionOwner(
