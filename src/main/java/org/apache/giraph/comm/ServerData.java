@@ -20,8 +20,8 @@ package org.apache.giraph.comm;
 
 import org.apache.giraph.comm.messages.MessageStoreByPartition;
 import org.apache.giraph.comm.messages.MessageStoreFactory;
+import org.apache.giraph.comm.netty.SaslNettyServer;
 import org.apache.giraph.graph.GiraphJob;
-import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexMutations;
 import org.apache.giraph.graph.partition.DiskBackedPartitionStore;
 import org.apache.giraph.graph.partition.PartitionStore;
