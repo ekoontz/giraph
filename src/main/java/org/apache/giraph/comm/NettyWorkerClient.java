@@ -213,7 +213,7 @@ public class NettyWorkerClient<I extends WritableComparable,
    */
   private void doRequest(WorkerInfo workerInfo,
                          InetSocketAddress remoteServerAddress,
-                         WritableRequest<I, V, E, M> writableRequest) {
+                         WritableRequest writableRequest) {
     // If this is local, execute locally
     if (service.getWorkerInfo().getPartitionId() ==
         workerInfo.getPartitionId()) {
@@ -246,7 +246,7 @@ public class NettyWorkerClient<I extends WritableComparable,
       Map<I, Collection<M>> partitionMessages =
           sendMessageCache.removePartitionMessages(partitionId);
       WritableRequest<I, V, E, M> writableRequest =
-          new SendPartitionMessagesRequest<I, V, E, M>(
+          new SendPartitionMessagesRequest(
               partitionId, partitionMessages);
       doRequest(partitionOwner.getWorkerInfo(), remoteServerAddress,
           writableRequest);
@@ -255,7 +255,7 @@ public class NettyWorkerClient<I extends WritableComparable,
 
   @Override
   public void sendPartitionRequest(WorkerInfo workerInfo,
-                                   Partition<I, V, E, M> partition) {
+                                   Partition partition) {
     InetSocketAddress remoteServerAddress =
         getInetSocketAddress(workerInfo, partition.getId());
     if (LOG.isDebugEnabled()) {
@@ -264,8 +264,8 @@ public class NettyWorkerClient<I extends WritableComparable,
     }
 
     int partitionId = partition.getId();
-    WritableRequest<I, V, E, M> vertexRequest =
-        new SendVertexRequest<I, V, E, M>(partitionId,
+    WritableRequest vertexRequest =
+        new SendVertexRequest(partitionId,
             partition.getVertices());
     doRequest(workerInfo, remoteServerAddress, vertexRequest);
 
@@ -285,16 +285,16 @@ public class NettyWorkerClient<I extends WritableComparable,
             "sendPartitionReq: Got IOException ", e);
       }
       if (messagesInMap > maxMessagesPerPartition) {
-        WritableRequest<I, V, E, M> messagesRequest = new
-            SendPartitionCurrentMessagesRequest<I, V, E, M>(partitionId, map);
+        WritableRequest messagesRequest = new
+            SendPartitionCurrentMessagesRequest(partitionId, map);
         doRequest(workerInfo, remoteServerAddress, messagesRequest);
         map.clear();
         messagesInMap = 0;
       }
     }
     if (!map.isEmpty()) {
-      WritableRequest<I, V, E, M> messagesRequest = new
-          SendPartitionCurrentMessagesRequest<I, V, E, M>(partitionId, map);
+      WritableRequest messagesRequest = new
+          SendPartitionCurrentMessagesRequest(partitionId, map);
       doRequest(workerInfo, remoteServerAddress, messagesRequest);
     }
   }
