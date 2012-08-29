@@ -186,7 +186,7 @@ public class NettyServer {
         return Channels.pipeline(
             byteCounter,
             new LengthFieldBasedFrameDecoder(1024 * 1024 * 1024, 0, 4, 0, 4),
-            new RequestDecoder(conf, requestRegistry, byteCounter),
+            new RequestDecoder(conf, byteCounter),
             requestServerHandlerFactory.newHandler(
                 workerRequestReservedMap, conf),
             new ResponseEncoder());

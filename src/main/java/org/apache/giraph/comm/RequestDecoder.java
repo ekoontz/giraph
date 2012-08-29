@@ -31,23 +31,13 @@ import org.jboss.netty.handler.codec.oneone.OneToOneDecoder;
 
 /**
  * Decodes encoded requests from the client.
- *
- * @param <I> Vertex id
- * @param <V> Vertex data
- * @param <E> Edge data
- * @param <M> Message data
  */
-@SuppressWarnings("rawtypes")
-public class RequestDecoder<I extends WritableComparable,
-    V extends Writable, E extends Writable,
-    M extends Writable> extends OneToOneDecoder {
+public class RequestDecoder extends OneToOneDecoder {
   /** Class logger */
   private static final Logger LOG =
       Logger.getLogger(RequestDecoder.class);
   /** Configuration */
   private final Configuration conf;
-  /** Registry of requests */
-  private final RequestRegistry requestRegistry;
   /** Byte counter to output */
   private final ByteCounter byteCounter;
 
@@ -59,10 +49,8 @@ public class RequestDecoder<I extends WritableComparable,
    * @param byteCounter Keeps track of the decoded bytes
    */
   public RequestDecoder(
-      Configuration conf, RequestRegistry requestRegistry,
-      ByteCounter byteCounter) {
+      Configuration conf, ByteCounter byteCounter) {
     this.conf = conf;
-    this.requestRegistry = requestRegistry;
     this.byteCounter = byteCounter;
   }
 
@@ -88,11 +76,9 @@ public class RequestDecoder<I extends WritableComparable,
     if (LOG.isDebugEnabled()) {
       LOG.debug("decode: Got a request of type " + type);
     }
-    @SuppressWarnings("unchecked")
-    Class<? extends WritableRequest<I, V, E, M>> writableRequestClass =
-        (Class<? extends WritableRequest<I, V, E, M>>)
-        requestRegistry.getClass(type);
-    WritableRequest<I, V, E, M> writableRequest =
+    Class<? extends WritableRequest> writableRequestClass =
+        type.getRequestClass();
+    WritableRequest writableRequest =
         ReflectionUtils.newInstance(writableRequestClass, conf);
     writableRequest.readFields(inputStream);
     return writableRequest;
