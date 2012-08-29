@@ -144,16 +144,8 @@ public class NettyWorkerClient<I extends WritableComparable,
       // No need to connect to myself
       if (service.getWorkerInfo().getPartitionId() !=
           partitionOwner.getWorkerInfo().getPartitionId()) {
-        InetSocketAddress address1 =
-          getInetSocketAddress(partitionOwner.getWorkerInfo(),
-            partitionOwner.getPartitionId());
-          LOG.debug("adding address: " + address1 + " for " +
-            "partition id: " + partitionOwner.getPartitionId());
-        addresses.add(address1);
-      } else {
-        LOG.debug("no need to connect to server for partition " +
-          partitionOwner.getWorkerInfo().getPartitionId() + ": it's hosted " +
-          "here at: " + service.getWorkerInfo().getInetSocketAddress());
+        addresses.add(getInetSocketAddress(partitionOwner.getWorkerInfo(),
+            partitionOwner.getPartitionId()));
       }
     }
 
