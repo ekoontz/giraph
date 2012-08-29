@@ -98,6 +98,10 @@ public class SendVertexRequest<I extends WritableComparable,
   @Override
   public void doRequest(ServerData<I, V, E, M> serverData,
                         ChannelHandlerContext ctx) {
+    if (vertices.isEmpty()) {
+      LOG.warn("doRequest: Got an empty request!");
+      return;
+    }
     serverData.getPartitionStore().addPartitionVertices(partitionId,
         vertices);
   }
