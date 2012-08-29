@@ -64,16 +64,8 @@ import org.jboss.netty.handler.codec.frame.LengthFieldBasedFrameDecoder;
 
 /**
  * Netty client for sending requests.
- *
- * @param <I> Vertex id
- * @param <V> Vertex data
- * @param <E> Edge data
- * @param <M> Message data
  */
-@SuppressWarnings("rawtypes")
-public class NettyClient<I extends WritableComparable,
-    V extends Writable, E extends Writable,
-    M extends Writable> {
+public class NettyClient {
   /** Do we have a limit on number of open requests we can have */
   public static final String LIMIT_NUMBER_OF_OPEN_REQUESTS =
       "giraph.waitForRequestsConfirmation";
@@ -221,13 +213,13 @@ public class NettyClient<I extends WritableComparable,
 
     // Used for the server to send SASL reply tokens to client's tokens.
     requestRegistry.registerClass(
-      new SaslTokenMessage<I, V, E, M>());
+      new SaslTokenMessage());
     // Used to tell client that authentication has completed.
     requestRegistry.registerClass(
-      new SaslComplete<I, V, E, M>());
+      new SaslComplete());
     // Used for all other responses from server to client.
     requestRegistry.registerClass(
-      new NullReply<I, V, E, M>());
+      new NullReply());
 
     requestRegistry.shutdown();
 
@@ -385,8 +377,8 @@ public class NettyClient<I extends WritableComparable,
       if (saslNettyClient.saslClient.hasInitialResponse()) {
         saslToken = saslNettyClient.saslClient.evaluateChallenge(saslToken);
       }
-      SaslTokenMessage<I, V, E, M> saslTokenMessage =
-        new SaslTokenMessage<I, V, E, M>();
+      SaslTokenMessage saslTokenMessage =
+        new SaslTokenMessage();
       saslTokenMessage.token = saslToken;
       sendWritableRequest((InetSocketAddress)channel.getRemoteAddress(),
         saslTokenMessage);
@@ -419,7 +411,7 @@ public class NettyClient<I extends WritableComparable,
                             SocketAddress remoteServer, byte[] token) {
     LOG.debug("sending sasl token of length: " + token.length +
       " to remote server: " + remoteServer);
-    SaslTokenMessage saslTokenMessage = new SaslTokenMessage<I, V, E, M>(token);
+    SaslTokenMessage saslTokenMessage = new SaslTokenMessage(token);
     sendWritableRequest(workerInfo.getPartitionId(),
       (InetSocketAddress) remoteServer, saslTokenMessage);
     LOG.debug("sent sasl token of length: " + token.length +
@@ -538,7 +530,7 @@ public class NettyClient<I extends WritableComparable,
   }
 
   public void sendWritableRequest(InetSocketAddress remoteServer,
-                                  WritableRequest<I, V, E, M> request) {
+                                  WritableRequest request) {
     // TODO: avoid this overloading of first argument (destinationWorkerId).
     // Using -1 to mean: this is a SASL request, not a normal work request.
     sendWritableRequest(-1, remoteServer, request);
@@ -553,7 +545,7 @@ public class NettyClient<I extends WritableComparable,
    */
   public void sendWritableRequest(Integer destWorkerId,
                                   InetSocketAddress remoteServer,
-                                  WritableRequest<I, V, E, M> request) {
+                                  WritableRequest request) {
     LOG.debug("sendWritableRequest (begin):" + destWorkerId + "," + remoteServer +
       "," + request);
     if (clientRequestIdRequestInfoMap.isEmpty()) {
