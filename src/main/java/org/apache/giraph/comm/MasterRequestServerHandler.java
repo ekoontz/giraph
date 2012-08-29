@@ -47,8 +47,7 @@ public class MasterRequestServerHandler extends
   public static class Factory implements RequestServerHandlerFactory {
     @Override
     public RequestServerHandler newHandler(
-        WorkerRequestReservedMap workerRequestReservedMap,
-        Configuration conf) {
+        WorkerRequestReservedMap workerRequestReservedMap, Configuration conf) {
       return new MasterRequestServerHandler(workerRequestReservedMap, conf);
     }
   }
