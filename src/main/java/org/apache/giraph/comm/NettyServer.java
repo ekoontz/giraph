@@ -93,8 +93,6 @@ public class NettyServer {
   private final int maximumPoolSize;
   /** TCP backlog */
   private final int tcpBacklog;
-  /** Request reqistry */
-  private final RequestRegistry requestRegistry = new RequestRegistry();
   /** Server bootstrap */
   private ServerBootstrap bootstrap;
   /** Byte counter for this client */
@@ -125,18 +123,6 @@ public class NettyServer {
                        requestServerHandlerFactory) {
     this.conf = conf;
     this.requestServerHandlerFactory = requestServerHandlerFactory;
-
-    requestRegistry.registerClass(
-      new SendVertexRequest());
-    requestRegistry.registerClass(
-        new SendPartitionMessagesRequest());
-    requestRegistry.registerClass(
-        new SendPartitionMutationsRequest());
-    requestRegistry.registerClass(
-    new SendPartitionCurrentMessagesRequest());
-    requestRegistry.registerClass(
-        new SaslTokenMessage());
-    requestRegistry.shutdown();
 
     sendBufferSize = conf.getInt(GiraphJob.SERVER_SEND_BUFFER_SIZE,
         GiraphJob.DEFAULT_SERVER_SEND_BUFFER_SIZE);
