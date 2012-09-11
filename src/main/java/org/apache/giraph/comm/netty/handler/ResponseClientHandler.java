@@ -127,6 +127,12 @@ public class ResponseClientHandler extends OneToOneDecoder {
                 " " + requestInfo + ".");
             }
           }
+
+          // Help NettyClient#waitSomeRequests() to finish faster
+          synchronized (workerIdOutstandingRequestMap) {
+            workerIdOutstandingRequestMap.notifyAll();
+          }
+
           LOG.debug("ResponseClientHandler is now calling super.handleUpstream().");
           super.handleUpstream(ctx,evt);
           return;
