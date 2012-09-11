@@ -94,7 +94,7 @@ public class ResponseClientHandler extends OneToOneDecoder {
       ctx.sendUpstream(evt);
       return;
     } else {
-      if (decodedMessage != null) {
+        if (decodedMessage != null) {
         if (decodedMessage.getClass() == NullReply.class) {
           NullReply nullReply = (NullReply) decodedMessage;
 
@@ -116,35 +116,17 @@ public class ResponseClientHandler extends OneToOneDecoder {
             return;
           }
 
-          if (response == 1) {
-            LOG.info("handleUpstream(): Already completed request " + requestId);
-          } else if (response != 0) {
-            throw new IllegalStateException(
-              "handleUpstream(): Got illegal response " + response);
-          }
-
-          LOG.debug("decode(): looking up client request id with senderId=" +
-            senderId + ", requestId: " + requestId);
           RequestInfo requestInfo = workerIdOutstandingRequestMap.remove(
             new ClientRequestId(senderId, requestId));
           if (requestInfo == null) {
-            LOG.error("senderId,requestId:" + senderId + "," + requestId + " is not legitimate.");
-            throw new IllegalStateException("handleUpstream(): Impossible to " +
-              "have a non-registered requestId " + requestId);
+            LOG.info("messageReceived: Already received response for request id = " +
+              requestId);
           } else {
-            LOG.error("senderId,requestId:" + senderId + "," + requestId + " is legitimate.");
             if (LOG.isDebugEnabled()) {
-              LOG.debug("handleUpstream(): Processed request id = " + requestId +
-                " " + requestInfo + ".  Waiting on " +
-                workerIdOutstandingRequestMap.size() + " requests.");
+              LOG.debug("messageReceived: Processed request id = " + requestId +
+                " " + requestInfo + ".");
             }
           }
-
-          // Help NettyClient#waitSomeRequests() to finish faster
-          synchronized (workerIdOutstandingRequestMap) {
-            workerIdOutstandingRequestMap.notifyAll();
-          }
-
           LOG.debug("ResponseClientHandler is now calling super.handleUpstream().");
           super.handleUpstream(ctx,evt);
           return;
@@ -161,7 +143,7 @@ public class ResponseClientHandler extends OneToOneDecoder {
             ctx.getChannel());
         }
         if (decodedMessage.getClass() == SaslComplete.class) {
-          LOG.debug("Server has sent us the SaslComplete message. Notifying " +
+          LOG.debug("Server has sent us the SaslComplete message. notify()ing " +
             "so that normal work may now proceed.");
           synchronized(saslNettyClient.authenticated) {
             saslNettyClient.authenticated.notify();
