@@ -30,7 +30,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -138,15 +137,22 @@ public class NettyClient {
   public static final ChannelLocal<SaslNettyClient> SASL =
     new ChannelLocal<SaslNettyClient>();
 
+  class ClientChannelFactory implements ChannelPipelineFactory {
+    private Configuration conf;
 
-  class ChannelFactory extends NioClientSocketChannelFactory {
+    public ClientChannelFactory(Configuration conf) {
+      this.conf = conf;
+    }
 
-    public ChannelFactory(
-      Executor bossExecutor, Executor workerExecutor, int workerCount) {
-      super(bossExecutor, workerExecutor, workerCount);
+    @Override
+    public ChannelPipeline getPipeline() throws Exception {
+      return Channels.pipeline(
+        byteCounter,
+        new LengthFieldBasedFrameDecoder(1024, 0, 4, 0, 4),
+        new RequestEncoder(),
+        new ResponseClientHandler(clientRequestIdRequestInfoMap, conf));
     }
   }
-
 
   /**
    * Only constructor
@@ -211,7 +217,7 @@ public class NettyClient {
 
     // Configure the client.
     bootstrap = new ClientBootstrap(
-        new ChannelFactory(
+        new NioClientSocketChannelFactory(
             bossExecutorService,
             workerExecutorService,
             maxThreads));
@@ -222,29 +228,11 @@ public class NettyClient {
     bootstrap.setOption("sendBufferSize", sendBufferSize);
     bootstrap.setOption("receiveBufferSize", receiveBufferSize);
 
-    if (true) {
-      // Set up the pipeline factory.
-      bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
-        @Override
-        public ChannelPipeline getPipeline() throws Exception {
-          return Channels.pipeline(
-            byteCounter,
-            new LengthFieldBasedFrameDecoder(1024, 0, 4, 0, 4),
-            new RequestEncoder(),
-            new ResponseClientHandler(clientRequestIdRequestInfoMap, conf));
-        }
-      });
-    } else {
-      LOG.info("setting up pipeline..(1)");
-      LOG.info("setting up pipeline..(2)");
-      bootstrap.getPipeline().addLast("counter",byteCounter);
-      bootstrap.getPipeline().addLast("decoder", new LengthFieldBasedFrameDecoder(1024, 0, 4, 0, 4));
-      bootstrap.getPipeline().addLast("encoder", new RequestEncoder());
-      LOG.info("setting up pipeline..(3)");
-      if (false) {
-        bootstrap.getPipeline().addLast("sasl", new SaslClientHandler(clientRequestIdRequestInfoMap, conf));
-      }
-      LOG.info("setting up pipeline..(4)");
+    // Set up the pipeline factory.
+    bootstrap.setPipelineFactory(new ClientChannelFactory(conf));
+    if (false) {
+      bootstrap.getPipeline().addLast("response-handler",
+        new SaslClientHandler(clientRequestIdRequestInfoMap, conf));
     }
   }
 
