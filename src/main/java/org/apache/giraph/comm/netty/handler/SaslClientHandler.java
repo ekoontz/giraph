@@ -2,7 +2,6 @@ package org.apache.giraph.comm.netty.handler;
 
 import org.apache.giraph.comm.netty.NettyClient;
 import org.apache.giraph.comm.netty.SaslNettyClient;
-import org.apache.giraph.comm.requests.NullReply;
 import org.apache.giraph.comm.requests.RequestType;
 import org.apache.giraph.comm.requests.SaslComplete;
 import org.apache.giraph.comm.requests.SaslTokenMessage;
@@ -56,80 +55,74 @@ public class SaslClientHandler extends OneToOneDecoder {
     LOG.debug("handleUpstream(): originalMessage: " + originalMessage);
     LOG.debug("handleUpstream(): decodedMessage:  " + decodedMessage);
 
-    if (originalMessage == decodedMessage) {
-      LOG.debug("original==decoded: sending upstream and returning.");
-      ctx.sendUpstream(evt);
-      return;
-    } else {
-      if (decodedMessage != null) {
-        // generate SASL response to server.
-        LOG.debug("original != decoded and decoded is not null:" +
-          "considering how to respond to server's SASL-related server message.");
+    if (decodedMessage != null) {
+      // generate SASL response to server.
+      LOG.debug("original != decoded and decoded is not null:" +
+        "considering how to respond to server's SASL-related server message.");
 
-        // get SASL client for this ctx.
-        SaslNettyClient saslNettyClient = NettyClient.SASL.get(ctx.getChannel());
-        if (saslNettyClient == null) {
-          throw new Exception("saslNettyClient was unexpectedly for channel: " +
-            ctx.getChannel());
+      // get SASL client for this ctx.
+      SaslNettyClient saslNettyClient = NettyClient.SASL.get(ctx.getChannel());
+      if (saslNettyClient == null) {
+        throw new Exception("saslNettyClient was unexpectedly for channel: " +
+          ctx.getChannel());
+      }
+      if (decodedMessage.getClass() == SaslComplete.class) {
+        LOG.debug("Server has sent us the SaslComplete message. notify()ing " +
+          "so that normal work may now proceed.");
+        synchronized(saslNettyClient.authenticated) {
+          saslNettyClient.authenticated.notify();
         }
-        if (decodedMessage.getClass() == SaslComplete.class) {
-          LOG.debug("Server has sent us the SaslComplete message. notify()ing " +
-            "so that normal work may now proceed.");
-          synchronized(saslNettyClient.authenticated) {
-            saslNettyClient.authenticated.notify();
-          }
-          LOG.debug("client's SASL completeness is: " +
-            saslNettyClient.isComplete());
-          if (saslNettyClient.isComplete() != true) {
-            LOG.error("Server returned a Sasl-complete message, but as far " +
-              "as we can tell, we are not authenticated yet.");
-            throw new Exception("Server returned a Sasl-complete message, " +
-              "but as far as we can tell, we are not authenticated yet.");
-          }
-          // remove this handler from client pipeline.
-          LOG.debug("REMOVING THE SASL CLIENT PIPELINE HANDLER NOW.");
-          ctx.getPipeline().remove(this);
-          LOG.debug("REMOVED.");
-          return;
-        } else {
-          if (saslNettyClient.isComplete() == true) {
-            LOG.debug("Sasl completion is done. we should be working on " +
-              " real work now.");
-          }
-          LOG.debug("authentication is not finished yet; continuing.");
-          if (saslNettyClient.isComplete() == true) {
-            LOG.error("Server did not return a Sasl-complete message, " +
-              "but as far we can tell, authentication is complete.");
-            throw new Exception("Server did not return a Sasl-complete message, " +
-              "but as far as we can tell, authentication is complete.");
-          }
+        LOG.debug("client's SASL completeness is: " +
+          saslNettyClient.isComplete());
+        if (saslNettyClient.isComplete() != true) {
+          LOG.error("Server returned a Sasl-complete message, but as far " +
+            "as we can tell, we are not authenticated yet.");
+          throw new Exception("Server returned a Sasl-complete message, " +
+            "but as far as we can tell, we are not authenticated yet.");
         }
+        // remove this handler from client pipeline.
+        LOG.debug("REMOVING THE SASL CLIENT PIPELINE HANDLER NOW.");
+        ctx.getPipeline().remove(this);
+        LOG.debug("REMOVED.");
+        return;
+      } else {
+        if (saslNettyClient.isComplete() == true) {
+          LOG.debug("Sasl completion is done. we should be working on " +
+            " real work now.");
+        }
+        LOG.debug("authentication is not finished yet; continuing.");
+        if (saslNettyClient.isComplete() == true) {
+          LOG.error("Server did not return a Sasl-complete message, " +
+            "but as far we can tell, authentication is complete.");
+          throw new Exception("Server did not return a Sasl-complete message, " +
+            "but as far as we can tell, authentication is complete.");
+        }
+      }
 
-        SaslTokenMessage serverToken = (SaslTokenMessage)decodedMessage;
-        LOG.debug("responding to server's token of length: " +
-          serverToken.token.length);
-        // generate SASL response.
-        byte[] responseToServer = saslNettyClient.saslResponse(serverToken.token);
-        if (responseToServer == null) {
-          LOG.debug("response to server is null. Hopefully we are done with " +
-            "authentication at this point.");
-          if (saslNettyClient.isComplete() == true) {
-            LOG.debug("SASL authentication is complete: the server should " +
-              "send us a SaslComplete message next.");
-          } else {
-            LOG.error("Not complete, but sasl response is null: that's not " +
-              "expected.");
-          }
+      SaslTokenMessage serverToken = (SaslTokenMessage)decodedMessage;
+      LOG.debug("responding to server's token of length: " +
+        serverToken.token.length);
+      // generate SASL response.
+      byte[] responseToServer = saslNettyClient.saslResponse(serverToken.token);
+      if (responseToServer == null) {
+        LOG.debug("response to server is null. Hopefully we are done with " +
+          "authentication at this point.");
+        if (saslNettyClient.isComplete() == true) {
+          LOG.debug("SASL authentication is complete: the server should " +
+            "send us a SaslComplete message next.");
         } else {
-          LOG.debug("response to server token has length:" + responseToServer.length);
-          // send downstream.
-          SaslTokenMessage saslResponse = new SaslTokenMessage(responseToServer);
-          ctx.getChannel().write(saslResponse);
+          LOG.error("Not complete, but sasl response is null: that's not " +
+            "expected.");
         }
       } else {
-        LOG.debug("decoded message is null: stopping processing of event: " + evt);
+        LOG.debug("response to server token has length:" + responseToServer.length);
+        // send downstream.
+        SaslTokenMessage saslResponse = new SaslTokenMessage(responseToServer);
+        ctx.getChannel().write(saslResponse);
       }
-   }
+    } else {
+      LOG.debug("decoded message is null: stopping processing of event: " + evt);
+    }
   }
 
   @Override
