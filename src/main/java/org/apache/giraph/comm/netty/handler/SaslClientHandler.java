@@ -62,38 +62,6 @@ public class SaslClientHandler extends OneToOneDecoder {
       return;
     } else {
       if (decodedMessage != null) {
-        if (decodedMessage.getClass() == NullReply.class) {
-          NullReply nullReply = (NullReply) decodedMessage;
-
-          int senderId = nullReply.getWorkerId();
-          long requestId = nullReply.getRequestId();
-          int response = nullReply.getAlreadyDone();
-
-          LOG.debug("handleUpstream(): senderId=" + senderId + "; requestId=" +
-            requestId + ")");
-
-          RequestInfo requestInfo = workerIdOutstandingRequestMap.remove(
-            new ClientRequestId(senderId, requestId));
-          if (requestInfo == null) {
-            LOG.info("messageReceived: Already received response for request id = " +
-              requestId);
-          } else {
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("messageReceived: Processed request id = " + requestId +
-                " " + requestInfo + ".");
-            }
-          }
-
-          // Help NettyClient#waitSomeRequests() to finish faster
-          synchronized (workerIdOutstandingRequestMap) {
-            workerIdOutstandingRequestMap.notifyAll();
-          }
-
-          LOG.debug("ResponseClientHandler is now calling super.handleUpstream().");
-          super.handleUpstream(ctx,evt);
-          return;
-        }
-
         // generate SASL response to server.
         LOG.debug("original != decoded and decoded is not null:" +
           "considering how to respond to server's SASL-related server message.");
