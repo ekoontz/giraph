@@ -82,57 +82,47 @@ public class ResponseClientHandler extends OneToOneDecoder {
     Object decodedMessage = decode(ctx, ctx.getChannel(), originalMessage);
     LOG.debug("handleUpstream(): originalMessage: " + originalMessage);
     LOG.debug("handleUpstream(): decodedMessage:  " + decodedMessage);
-    if (originalMessage == decodedMessage) {
-      LOG.debug("original==decoded: sending upstream and returning.");
-      ctx.sendUpstream(evt);
-      return;
-    } else {
-        if (decodedMessage != null) {
-          if (decodedMessage.getClass() == NullReply.class) {
-            NullReply nullReply = (NullReply) decodedMessage;
+    if (decodedMessage.getClass() == NullReply.class) {
+      NullReply nullReply = (NullReply) decodedMessage;
 
-            int senderId = nullReply.getWorkerId();
-            long requestId = nullReply.getRequestId();
-            int response = nullReply.getAlreadyDone();
+      int senderId = nullReply.getWorkerId();
+      long requestId = nullReply.getRequestId();
+      int response = nullReply.getAlreadyDone();
 
-            LOG.debug("handleUpstream(): senderId=" + senderId + "; requestId=" +
-              requestId + ")");
+      LOG.debug("handleUpstream(): senderId=" + senderId + "; requestId=" +
+        requestId + ")");
 
-            // Simulate a failed response on the first response (if desired)
-            if (dropFirstResponse && !ALREADY_DROPPED_FIRST_RESPONSE) {
-              LOG.info("handleUpstream(): Simulating dropped response " + response +
-                " for request " + requestId);
-              ALREADY_DROPPED_FIRST_RESPONSE = true;
-              synchronized (workerIdOutstandingRequestMap) {
-                workerIdOutstandingRequestMap.notifyAll();
-              }
-              return;
-            }
-
-            RequestInfo requestInfo = workerIdOutstandingRequestMap.remove(
-              new ClientRequestId(senderId, requestId));
-            if (requestInfo == null) {
-              LOG.info("messageReceived: Already received response for request id = " +
-                requestId);
-            } else {
-              if (LOG.isDebugEnabled()) {
-                LOG.debug("messageReceived: Processed request id = " + requestId +
-                  " " + requestInfo + ".");
-              }
-            }
-
-            // Help NettyClient#waitSomeRequests() to finish faster
-            synchronized (workerIdOutstandingRequestMap) {
-              workerIdOutstandingRequestMap.notifyAll();
-            }
-
-            LOG.debug("ResponseClientHandler is now calling super.handleUpstream().");
-            super.handleUpstream(ctx,evt);
-            return;
-          }
-        } else {
-          LOG.debug("decoded message is null: stopping processing of event: " + evt);
+      // Simulate a failed response on the first response (if desired)
+      if (dropFirstResponse && !ALREADY_DROPPED_FIRST_RESPONSE) {
+        LOG.info("handleUpstream(): Simulating dropped response " + response +
+          " for request " + requestId);
+        ALREADY_DROPPED_FIRST_RESPONSE = true;
+        synchronized (workerIdOutstandingRequestMap) {
+          workerIdOutstandingRequestMap.notifyAll();
         }
+        return;
+      }
+
+      RequestInfo requestInfo = workerIdOutstandingRequestMap.remove(
+        new ClientRequestId(senderId, requestId));
+      if (requestInfo == null) {
+        LOG.info("messageReceived: Already received response for request id = " +
+          requestId);
+      } else {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("messageReceived: Processed request id = " + requestId +
+            " " + requestInfo + ".");
+        }
+      }
+
+      // Help NettyClient#waitSomeRequests() to finish faster
+      synchronized (workerIdOutstandingRequestMap) {
+        workerIdOutstandingRequestMap.notifyAll();
+      }
+
+      LOG.debug("ResponseClientHandler is now calling super.handleUpstream().");
+      super.handleUpstream(ctx,evt);
+      return;
     }
   }
 
