@@ -39,6 +39,7 @@ import org.apache.giraph.comm.netty.handler.ClientRequestId;
 import org.apache.giraph.comm.netty.handler.ResponseClientHandler;
 import org.apache.giraph.comm.netty.handler.RequestEncoder;
 import org.apache.giraph.comm.netty.handler.RequestInfo;
+import org.apache.giraph.comm.netty.handler.SaslClientHandler;
 import org.apache.giraph.comm.requests.SaslTokenMessage;
 import org.apache.giraph.comm.requests.WritableRequest;
 import org.apache.giraph.graph.GiraphJob;
@@ -136,6 +137,23 @@ public class NettyClient {
   public static final ChannelLocal<SaslNettyClient> SASL =
     new ChannelLocal<SaslNettyClient>();
 
+  class ClientChannelFactory implements ChannelPipelineFactory {
+    private Configuration conf;
+
+    public ClientChannelFactory(Configuration conf) {
+      this.conf = conf;
+    }
+
+    @Override
+    public ChannelPipeline getPipeline() throws Exception {
+      return Channels.pipeline(
+        byteCounter,
+        new LengthFieldBasedFrameDecoder(1024, 0, 4, 0, 4),
+        new RequestEncoder(),
+        new ResponseClientHandler(clientRequestIdRequestInfoMap, conf));
+    }
+  }
+
   /**
    * Only constructor
    *
@@ -211,16 +229,11 @@ public class NettyClient {
     bootstrap.setOption("receiveBufferSize", receiveBufferSize);
 
     // Set up the pipeline factory.
-    bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
-      @Override
-      public ChannelPipeline getPipeline() throws Exception {
-        return Channels.pipeline(
-            byteCounter,
-            new LengthFieldBasedFrameDecoder(1024, 0, 4, 0, 4),
-            new RequestEncoder(),
-            new ResponseClientHandler(clientRequestIdRequestInfoMap, conf));
-      }
-    });
+    bootstrap.setPipelineFactory(new ClientChannelFactory(conf));
+    if (false) {
+      bootstrap.getPipeline().addLast("response-handler",
+        new SaslClientHandler(clientRequestIdRequestInfoMap, conf));
+    }
   }
 
   /**
