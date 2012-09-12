@@ -118,6 +118,10 @@ public class SaslClientHandler extends OneToOneDecoder {
             throw new Exception("Server returned a Sasl-complete message, " +
               "but as far as we can tell, we are not authenticated yet.");
           }
+          // remove this handler from client pipeline.
+          LOG.debug("REMOVING THE SASL CLIENT PIPELINE HANDLER NOW.");
+          ctx.getPipeline().remove(this);
+          LOG.debug("REMOVED.");
           return;
         } else {
           if (saslNettyClient.isComplete() == true) {

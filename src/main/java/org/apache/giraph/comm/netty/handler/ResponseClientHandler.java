@@ -18,12 +18,8 @@
 
 package org.apache.giraph.comm.netty.handler;
 
-import org.apache.giraph.comm.netty.NettyClient;
-import org.apache.giraph.comm.netty.SaslNettyClient;
 import org.apache.giraph.comm.requests.NullReply;
 import org.apache.giraph.comm.requests.RequestType;
-import org.apache.giraph.comm.requests.SaslComplete;
-import org.apache.giraph.comm.requests.SaslTokenMessage;
 import org.apache.giraph.comm.requests.WritableRequest;
 import org.apache.giraph.graph.GiraphJob;
 import org.apache.hadoop.conf.Configuration;
@@ -147,7 +143,52 @@ public class ResponseClientHandler extends OneToOneDecoder {
   protected Object decode(ChannelHandlerContext ctx,
       Channel channel, Object msg) throws Exception {
     LOG.debug("decode(): decoding server response from source message:" + msg);
-    LOG.debug("decoder is not doing anything at all here now.");
-    return msg;
+
+    if (!(msg instanceof ChannelBuffer)) {
+      throw new IllegalStateException("decode: Got illegal message " + msg);
+    }
+
+    // Decode msg into an object whose class C implements WritableRequest:
+    // (C is one of {SaslTokenMessage, SaslCompleteMessage, NullReply}.
+    //
+    // 1. Convert message to a stream that can be decoded.
+    ChannelBuffer buffer = (ChannelBuffer) msg;
+    ChannelBufferInputStream inputStream = new ChannelBufferInputStream(buffer);
+
+    LOG.debug("decode(): reading from inputStream: " + inputStream);
+
+    // 2. Get first byte: message type:
+    // one of {SendPartitionMessage, ..., SaslTokenMessage}.
+    int enumValue = inputStream.readByte();
+    RequestType type = RequestType.values()[enumValue];
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("decode(): Got a response of type " + type + " from server:" +
+        channel.getRemoteAddress());
+    }
+
+    LOG.debug("decode(): now decoding msg of type:" + type +
+      " into a WritableRequest.");
+
+    // 3. create object of this type, into which we will deserialize
+    // the inputStream's data.
+    Class<? extends WritableRequest> writableRequestClass =
+      type.getRequestClass();
+
+    LOG.debug("decode(): writableRequestClass: " + writableRequestClass +
+      " found for type:" + type);
+
+    WritableRequest serverResponse =
+      ReflectionUtils.newInstance(writableRequestClass, conf);
+
+    LOG.debug("decode(): reading fields of server response:" + serverResponse);
+    // 4. deserialize the object from the inputStream into serverResponse.
+    try {
+      serverResponse.readFields(inputStream);
+    } catch (IOException e) {
+      LOG.error("GOT AN IOException WHEN TRYING TO READ SERVER RESPONSE: " + e);
+    }
+    LOG.debug("decode(): finished reading fields of server response:" +
+      serverResponse);
+    return serverResponse;
   }
 }
