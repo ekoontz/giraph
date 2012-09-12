@@ -106,7 +106,7 @@ public class GiraphJob {
   /** Override the Hadoop log level and set the desired log level. */
   public static final String LOG_LEVEL = "giraph.logLevel";
   /** Default log level is INFO (same as Hadoop) */
-  public static final String LOG_LEVEL_DEFAULT = "info";
+  public static final String LOG_LEVEL_DEFAULT = "debug";
 
   /**
    * Minimum percent of the maximum number of workers that have responded
