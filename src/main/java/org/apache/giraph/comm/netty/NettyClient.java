@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -39,6 +40,7 @@ import org.apache.giraph.comm.netty.handler.ClientRequestId;
 import org.apache.giraph.comm.netty.handler.ResponseClientHandler;
 import org.apache.giraph.comm.netty.handler.RequestEncoder;
 import org.apache.giraph.comm.netty.handler.RequestInfo;
+import org.apache.giraph.comm.netty.handler.SaslClientHandler;
 import org.apache.giraph.comm.requests.SaslTokenMessage;
 import org.apache.giraph.comm.requests.WritableRequest;
 import org.apache.giraph.graph.GiraphJob;
@@ -136,6 +138,16 @@ public class NettyClient {
   public static final ChannelLocal<SaslNettyClient> SASL =
     new ChannelLocal<SaslNettyClient>();
 
+
+  class ChannelFactory extends NioClientSocketChannelFactory {
+
+    public ChannelFactory(
+      Executor bossExecutor, Executor workerExecutor, int workerCount) {
+      super(bossExecutor, workerExecutor, workerCount);
+    }
+  }
+
+
   /**
    * Only constructor
    *
@@ -199,7 +211,7 @@ public class NettyClient {
 
     // Configure the client.
     bootstrap = new ClientBootstrap(
-        new NioClientSocketChannelFactory(
+        new ChannelFactory(
             bossExecutorService,
             workerExecutorService,
             maxThreads));
@@ -210,17 +222,31 @@ public class NettyClient {
     bootstrap.setOption("sendBufferSize", sendBufferSize);
     bootstrap.setOption("receiveBufferSize", receiveBufferSize);
 
-    // Set up the pipeline factory.
-    bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
-      @Override
-      public ChannelPipeline getPipeline() throws Exception {
-        return Channels.pipeline(
+    if (true) {
+      ChannelPipeline pipeline = Channels.pipeline();
+      // Set up the pipeline factory.
+      bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
+        @Override
+        public ChannelPipeline getPipeline() throws Exception {
+          return Channels.pipeline(
             byteCounter,
             new LengthFieldBasedFrameDecoder(1024, 0, 4, 0, 4),
             new RequestEncoder(),
             new ResponseClientHandler(clientRequestIdRequestInfoMap, conf));
+        }
+      });
+    } else {
+      LOG.info("setting up pipeline..(1)");
+      LOG.info("setting up pipeline..(2)");
+      bootstrap.getPipeline().addLast("counter",byteCounter);
+      bootstrap.getPipeline().addLast("decoder", new LengthFieldBasedFrameDecoder(1024, 0, 4, 0, 4));
+      bootstrap.getPipeline().addLast("encoder", new RequestEncoder());
+      LOG.info("setting up pipeline..(3)");
+      if (false) {
+        bootstrap.getPipeline().addLast("sasl", new SaslClientHandler(clientRequestIdRequestInfoMap, conf));
       }
-    });
+      LOG.info("setting up pipeline..(4)");
+    }
   }
 
   /**
