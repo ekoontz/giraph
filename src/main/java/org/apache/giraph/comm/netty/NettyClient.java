@@ -137,24 +137,6 @@ public class NettyClient {
   public static final ChannelLocal<SaslNettyClient> SASL =
     new ChannelLocal<SaslNettyClient>();
 
-  class ClientChannelFactory implements ChannelPipelineFactory {
-    private Configuration conf;
-
-    public ClientChannelFactory(Configuration conf) {
-      this.conf = conf;
-    }
-
-    @Override
-    public ChannelPipeline getPipeline() throws Exception {
-      return Channels.pipeline(
-        byteCounter,
-        new LengthFieldBasedFrameDecoder(1024, 0, 4, 0, 4),
-        new RequestEncoder(),
-        new SaslClientHandler(clientRequestIdRequestInfoMap, conf),
-        new ResponseClientHandler(clientRequestIdRequestInfoMap, conf));
-    }
-  }
-
   /**
    * Only constructor
    *
@@ -230,11 +212,17 @@ public class NettyClient {
     bootstrap.setOption("receiveBufferSize", receiveBufferSize);
 
     // Set up the pipeline factory.
-    bootstrap.setPipelineFactory(new ClientChannelFactory(conf));
-    if (false) {
-      bootstrap.getPipeline().addLast("response-handler",
-        new SaslClientHandler(clientRequestIdRequestInfoMap, conf));
-    }
+    bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
+      @Override
+      public ChannelPipeline getPipeline() throws Exception {
+        return Channels.pipeline(
+          byteCounter,
+          new LengthFieldBasedFrameDecoder(1024, 0, 4, 0, 4),
+          new RequestEncoder(),
+          new SaslClientHandler(clientRequestIdRequestInfoMap, conf),
+          new ResponseClientHandler(clientRequestIdRequestInfoMap, conf));
+      }
+    });
   }
 
   /**
