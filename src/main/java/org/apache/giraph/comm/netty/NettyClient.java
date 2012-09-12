@@ -223,7 +223,6 @@ public class NettyClient {
     bootstrap.setOption("receiveBufferSize", receiveBufferSize);
 
     if (true) {
-      ChannelPipeline pipeline = Channels.pipeline();
       // Set up the pipeline factory.
       bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
         @Override
