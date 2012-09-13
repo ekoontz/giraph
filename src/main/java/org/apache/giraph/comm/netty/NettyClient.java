@@ -206,12 +206,21 @@ public class NettyClient {
     bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
       @Override
       public ChannelPipeline getPipeline() throws Exception {
-        return Channels.pipeline(
-            byteCounter,
-            new LengthFieldBasedFrameDecoder(1024, 0, 4, 0, 4),
-            new RequestEncoder(),
-            new SaslClientHandler(clientRequestIdRequestInfoMap, conf),
-            new ResponseClientHandler(clientRequestIdRequestInfoMap, conf));
+        if (conf.getBoolean(GiraphJob.AUTHENTICATE,
+            GiraphJob.DEFAULT_AUTHENTICATE)) {
+          return Channels.pipeline(
+              byteCounter,
+              new LengthFieldBasedFrameDecoder(1024, 0, 4, 0, 4),
+              new RequestEncoder(),
+              new SaslClientHandler(clientRequestIdRequestInfoMap, conf),
+              new ResponseClientHandler(clientRequestIdRequestInfoMap, conf));
+        } else {
+          return Channels.pipeline(
+              byteCounter,
+              new LengthFieldBasedFrameDecoder(1024, 0, 4, 0, 4),
+              new RequestEncoder(),
+              new ResponseClientHandler(clientRequestIdRequestInfoMap, conf));
+        }
       }
     });
   }
