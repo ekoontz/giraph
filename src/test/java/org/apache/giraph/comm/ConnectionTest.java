@@ -24,6 +24,7 @@ import org.apache.giraph.comm.messages.SimpleMessageStore;
 import org.apache.giraph.comm.netty.handler.RequestServerHandler;
 import org.apache.giraph.comm.netty.NettyClient;
 import org.apache.giraph.comm.netty.NettyServer;
+import org.apache.giraph.comm.netty.handler.SaslServerHandler;
 import org.apache.giraph.comm.netty.handler.WorkerRequestServerHandler;
 import org.apache.giraph.utils.MockUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -88,6 +89,9 @@ public class ConnectionTest {
                 MockUtils.mockServiceGetVertexPartitionOwner(1), conf));
    RequestServerHandler.Factory requestServerHandlerFactory =
        new WorkerRequestServerHandler.Factory(serverData);
+    SaslServerHandler.Factory saslServerHandlerFactory =
+        new SaslServerHandler.Factory(serverData);
+
 
     NettyServer server1 = new NettyServer(conf, requestServerHandlerFactory);
     server1.start();

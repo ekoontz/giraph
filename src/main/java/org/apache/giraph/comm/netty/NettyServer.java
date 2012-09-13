@@ -24,6 +24,7 @@ import java.net.UnknownHostException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import org.apache.giraph.comm.netty.handler.SaslServerHandler;
 import org.apache.giraph.comm.netty.handler.WorkerRequestReservedMap;
 import org.apache.giraph.comm.netty.handler.RequestDecoder;
 import org.apache.giraph.comm.netty.handler.RequestServerHandler;
@@ -73,6 +74,8 @@ public class NettyServer {
   private final int tcpBacklog;
   /** Factory for {@link RequestServerHandler} */
   private final RequestServerHandler.Factory requestServerHandlerFactory;
+  /** Factory for {@link SaslServerHandler} */
+  private final SaslServerHandler.Factory saslServerHandlerFactory;
   /** Server bootstrap */
   private ServerBootstrap bootstrap;
   /** Byte counter for this client */
@@ -98,9 +101,11 @@ public class NettyServer {
    * @param requestServerHandlerFactory Factory for request handlers
    */
   public NettyServer(Configuration conf,
-      RequestServerHandler.Factory requestServerHandlerFactory) {
+      RequestServerHandler.Factory requestServerHandlerFactory,
+      SaslServerHandler.Factory saslServerHandlerFactory) {
     this.conf = conf;
     this.requestServerHandlerFactory = requestServerHandlerFactory;
+    this.saslServerHandlerFactory = saslServerHandlerFactory;
 
     sendBufferSize = conf.getInt(GiraphJob.SERVER_SEND_BUFFER_SIZE,
         GiraphJob.DEFAULT_SERVER_SEND_BUFFER_SIZE);
@@ -151,6 +156,8 @@ public class NettyServer {
             byteCounter,
             new LengthFieldBasedFrameDecoder(1024 * 1024 * 1024, 0, 4, 0, 4),
             new RequestDecoder(conf, byteCounter),
+            saslServerHandlerFactory.newHandler(workerRequestReservedMap,
+                conf),
             requestServerHandlerFactory.newHandler(workerRequestReservedMap,
                 conf),
             new ResponseEncoder());

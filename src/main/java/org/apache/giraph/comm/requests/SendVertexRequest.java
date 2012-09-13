@@ -43,8 +43,8 @@ import java.util.Collection;
  */
 @SuppressWarnings("rawtypes")
 public class SendVertexRequest<I extends WritableComparable,
-    V extends Writable, E extends Writable,
-    M extends Writable> extends WritableRequest<I, V, E, M> {
+    V extends Writable, E extends Writable, M extends Writable> extends
+    WritableRequest<I, V, E, M> {
   /** Class logger */
   private static final Logger LOG =
       Logger.getLogger(SendVertexRequest.class);

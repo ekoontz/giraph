@@ -37,7 +37,6 @@ import org.jboss.netty.channel.ChannelHandlerContext;
  * @param <E> Edge data
  * @param <M> Message data
  */
-@SuppressWarnings("rawtypes")
 public abstract class WritableRequest<I extends WritableComparable,
     V extends Writable, E extends Writable,
     M extends Writable> implements Writable, Configurable {

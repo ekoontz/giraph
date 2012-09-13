@@ -20,6 +20,7 @@ package org.apache.giraph.comm.netty;
 
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.ServerData;
+import org.apache.giraph.comm.netty.handler.SaslServerHandler;
 import org.apache.giraph.comm.netty.handler.WorkerRequestServerHandler;
 import org.apache.giraph.comm.WorkerServer;
 import org.apache.giraph.comm.messages.BasicMessageStore;
@@ -30,6 +31,7 @@ import org.apache.giraph.comm.messages.MessageStoreByPartition;
 import org.apache.giraph.comm.messages.MessageStoreFactory;
 import org.apache.giraph.comm.messages.SequentialFileMessageStore;
 import org.apache.giraph.comm.messages.SimpleMessageStore;
+import org.apache.giraph.comm.netty.handler.WorkerSaslServerHandler;
 import org.apache.giraph.graph.BspUtils;
 import org.apache.giraph.graph.GiraphJob;
 import org.apache.giraph.graph.Vertex;
@@ -101,8 +103,12 @@ public class NettyWorkerServer<I extends WritableComparable,
       serverData = new ServerData<I, V, E, M>(conf, storeFactory);
     }
 
+    /*SaslServerHandler.Factory<I, V, E, M> foo = new
+        WorkerSaslServerHandler.Factory<I, V, E, M>(serverData);*/
+
     nettyServer = new NettyServer(conf,
-        new WorkerRequestServerHandler.Factory<I, V, E, M>(serverData));
+        new WorkerRequestServerHandler.Factory<I, V, E, M>(serverData),
+        new WorkerSaslServerHandler.Factory<I, V, E, M>(serverData));
     nettyServer.start();
   }
 

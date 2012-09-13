@@ -20,6 +20,7 @@ package org.apache.giraph.comm.netty;
 
 import org.apache.giraph.comm.netty.handler.MasterRequestServerHandler;
 import org.apache.giraph.comm.MasterServer;
+import org.apache.giraph.comm.netty.handler.MasterSaslServerHandler;
 import org.apache.hadoop.conf.Configuration;
 
 import java.net.InetSocketAddress;
@@ -38,7 +39,8 @@ public class NettyMasterServer implements MasterServer {
    */
   public NettyMasterServer(Configuration conf) {
     nettyServer = new NettyServer(conf,
-        new MasterRequestServerHandler.Factory());
+        new MasterRequestServerHandler.Factory(),
+        new MasterSaslServerHandler.Factory());
     nettyServer.start();
   }
 
