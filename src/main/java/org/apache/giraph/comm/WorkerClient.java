@@ -42,7 +42,7 @@ public interface WorkerClient<I extends WritableComparable,
   /**
    *  Setup the client.
    */
-  void setup();
+  void setup(boolean saslAuthenticate);
 
   /**
    * Fix changes to the workers and the mapping between partitions and

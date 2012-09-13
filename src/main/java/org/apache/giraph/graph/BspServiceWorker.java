@@ -576,7 +576,8 @@ public class BspServiceWorker<I extends WritableComparable,
     workerGraphPartitioner.updatePartitionOwners(
         getWorkerInfo(), masterSetPartitionOwners, getPartitionStore());
 
-    commService.setup();
+    commService.setup(getConfiguration().getBoolean(GiraphJob.AUTHENTICATE,
+        GiraphJob.DEFAULT_AUTHENTICATE));
 
     // Ensure the InputSplits are ready for processing before processing
     while (true) {
@@ -1377,7 +1378,8 @@ public class BspServiceWorker<I extends WritableComparable,
 
     // Communication service needs to setup the connections prior to
     // processing vertices
-    commService.setup();
+    commService.setup(getConfiguration().getBoolean(GiraphJob.AUTHENTICATE,
+        GiraphJob.DEFAULT_AUTHENTICATE));
   }
 
   /**

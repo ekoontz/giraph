@@ -483,6 +483,12 @@ public class GiraphJob {
   /** Default ZooKeeper maximum session timeout of 10 minutes (in msecs). */
   public static final int DEFAULT_ZOOKEEPER_MAX_SESSION_TIMEOUT = 600 * 1000;
 
+  /** Whether to use Hadoop Job Token to authenticate Netty BSP Clients to
+   * Servers. */
+  public static final String AUTHENTICATE = "giraph.authenticate";
+  /** Default is not to do authenticate BSP clients to servers. */
+  public static final boolean DEFAULT_AUTHENTICATE = false;
+
   /** Class logger */
   private static final Logger LOG = Logger.getLogger(GiraphJob.class);
 

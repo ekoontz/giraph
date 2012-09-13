@@ -103,9 +103,6 @@ public class NettyWorkerServer<I extends WritableComparable,
       serverData = new ServerData<I, V, E, M>(conf, storeFactory);
     }
 
-    /*SaslServerHandler.Factory<I, V, E, M> foo = new
-        WorkerSaslServerHandler.Factory<I, V, E, M>(serverData);*/
-
     nettyServer = new NettyServer(conf,
         new WorkerRequestServerHandler.Factory<I, V, E, M>(serverData),
         new WorkerSaslServerHandler.Factory<I, V, E, M>(serverData));

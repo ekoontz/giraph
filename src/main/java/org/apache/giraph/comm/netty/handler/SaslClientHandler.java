@@ -33,7 +33,6 @@ public class SaslClientHandler extends OneToOneDecoder {
   public SaslClientHandler(ConcurrentMap<ClientRequestId, RequestInfo>
                       workerIdOutstandingRequestMap,
                     Configuration conf) {
-    LOG.debug("CREATING THE SASLCLIENTHANDLER.");
     this.conf = conf;
     this.workerIdOutstandingRequestMap = workerIdOutstandingRequestMap;
   }

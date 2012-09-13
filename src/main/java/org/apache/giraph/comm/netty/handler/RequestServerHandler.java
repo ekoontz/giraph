@@ -59,6 +59,9 @@ public abstract class RequestServerHandler<R> extends
   private final WorkerRequestReservedMap workerRequestReservedMap;
   /** My worker id */
   private final int myWorkerId;
+  /** If set to true, only authenticated clients are authorized to perform
+   * the action. */
+  private boolean authorizeOnlyIfAuthenticated = false;
 
   /**
    * Constructor with external server data
@@ -77,6 +80,9 @@ public abstract class RequestServerHandler<R> extends
     closeFirstRequest = conf.getBoolean(
         GiraphJob.NETTY_SIMULATE_FIRST_REQUEST_CLOSED,
         GiraphJob.NETTY_SIMULATE_FIRST_REQUEST_CLOSED_DEFAULT);
+    authorizeOnlyIfAuthenticated = conf.getBoolean(
+        GiraphJob.AUTHENTICATE,
+        GiraphJob.DEFAULT_AUTHENTICATE);
     myWorkerId = conf.getInt("mapred.task.partition", -1);
   }
 
@@ -104,25 +110,33 @@ public abstract class RequestServerHandler<R> extends
         writableRequest.getClientId(),
         writableRequest.getRequestId())) {
 
-      // Do authorization: is this client allowed to doRequest() on this server?
-      SaslNettyServer saslNettyServer =
-        NettyServer.channelSaslNettyServers.get(ctx.getChannel());
-      if (saslNettyServer == null) {
-              LOG.warn("This client is not authorized to perform this action " +
-                "since there's no saslNettyServer for it.");
-      } else {
-        if (saslNettyServer.isComplete() != true) {
+      if (authorizeOnlyIfAuthenticated) {
+        // Do authorization: is this client allowed to doRequest() on this server?
+        SaslNettyServer saslNettyServer =
+            NettyServer.channelSaslNettyServers.get(ctx.getChannel());
+        if (saslNettyServer == null) {
           LOG.warn("This client is not authorized to perform this action " +
-            "because SASL authentication did not complete.");
+              "since there's no saslNettyServer for it: will not perform " +
+              "the requested action.");
         } else {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("messageReceived(): authenticated client: " +
-              saslNettyServer.getUserName() + " is authorized to do request " +
-              "on server.");
+          if (saslNettyServer.isComplete() != true) {
+            LOG.warn("This client is not authorized to perform this action " +
+                "because SASL authentication did not complete.");
+          } else {
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("messageReceived(): authenticated client: " +
+                  saslNettyServer.getUserName() + " is authorized to do request " +
+                  "on server.");
+            }
+            writableRequest.doRequest(serverData, ctx);
+            alreadyDone = 0;
           }
-          writableRequest.doRequest(serverData, ctx);
-          alreadyDone = 0;
         }
+      } else {
+        // Not configured to do SASL authentication, so any client's requests
+        // will be performed.
+        writableRequest.doRequest(serverData, ctx);
+        alreadyDone = 0;
       }
     } else {
       LOG.info("messageReceived: Request id " +

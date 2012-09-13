@@ -24,6 +24,7 @@ import org.apache.giraph.comm.WorkerClient;
 import org.apache.giraph.comm.WorkerClientServer;
 import org.apache.giraph.comm.WorkerServer;
 import org.apache.giraph.graph.Edge;
+import org.apache.giraph.graph.GiraphJob;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.WorkerInfo;
 import org.apache.giraph.graph.partition.Partition;
@@ -123,12 +124,14 @@ public class NettyWorkerClientServer<I extends WritableComparable,
   }
 
   @Override
-  public void setup() {
+  public void setup(boolean authenticateWithServer) {
     client.fixPartitionIdToSocketAddrMap();
-    try {
-      client.authenticate();
-    } catch (IOException e) {
-      LOG.error("failed to authenticate : " + e);
+    if (authenticateWithServer) {
+      try {
+        client.authenticate();
+      } catch (IOException e) {
+        LOG.error("failed to authenticate : " + e);
+      }
     }
   }
 
