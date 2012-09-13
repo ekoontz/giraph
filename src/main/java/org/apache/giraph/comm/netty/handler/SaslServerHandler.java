@@ -98,10 +98,9 @@ public abstract class SaslServerHandler<R> extends
       return;
     }
 
-    // TODO: add a separate pipeline component here on server-side, called
-    // SaslServerCodec, dedicated to handling SASL interaction with clients.
     if (writableRequest.getType() == RequestType.SASL_TOKEN_MESSAGE) {
-      // initialize server-side SASL functionality.
+      // initialize server-side SASL functionality, if we haven't yet
+      // (in which case we are looking at the first SASL message from the client).
       SaslNettyServer saslNettyServer = NettyServer.channelSaslNettyServers.get(ctx.getChannel());
       if (saslNettyServer == null) {
         LOG.debug("No saslNettyServer for " + ctx.getChannel() +
@@ -113,12 +112,24 @@ public abstract class SaslServerHandler<R> extends
           ctx.getChannel().getLocalAddress() + " for client " +
           ctx.getChannel().getRemoteAddress());
       }
-      LOG.debug("messageReceived(): No accounting is being done on " +
-        "SASL messages (yet): calling doRequest() and returning.");
       writableRequest.doRequest(serverData,ctx);
+      if (saslNettyServer.isComplete()) {
+        LOG.debug("SASL authentication is complete for client with username: " +
+            saslNettyServer.getUserName());
+        ctx.getPipeline().remove(this);
+      }
+      // do not send upstream to other handlers: no further action needs to be
+      // done for SASL_TOKEN_MESSAGE requests.
       return;
     } else {
-      LOG.debug("THIS IS NOT A SASL ACTION: SENDING UPSTREAM.");
+      // Doing a 'warn' here because SaslServerHandler should have removed
+      // itself from the pipeline before any other-than-SASL messages are
+      // received from the client.
+      LOG.warn("Sending upstream an unexpected non-SASL message :  " +
+          writableRequest);
+      // Note that the upstream (RequestServerHandler) will refuse to process a
+      // request if SASL authentication is not complete (that is, authentication
+      // must proceed authorization).
       ctx.sendUpstream(e);
     }
   }
