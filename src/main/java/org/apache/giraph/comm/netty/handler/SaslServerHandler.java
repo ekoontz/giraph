@@ -117,47 +117,10 @@ public abstract class SaslServerHandler<R> extends
         "SASL messages (yet): calling doRequest() and returning.");
       writableRequest.doRequest(serverData,ctx);
       return;
-    }
-
-    // Only execute this request exactly once
-    int alreadyDone = 1;
-    if (workerRequestReservedMap.reserveRequest(
-        writableRequest.getClientId(),
-        writableRequest.getRequestId())) {
-
-      // Do authorization: is this client allowed to doRequest() on this server?
-      SaslNettyServer saslNettyServer =
-        NettyServer.channelSaslNettyServers.get(ctx.getChannel());
-      if (saslNettyServer == null) {
-              LOG.warn("This client is not authorized to perform this action " +
-                "since there's no saslNettyServer for it.");
-      } else {
-        if (saslNettyServer.isComplete() != true) {
-          LOG.warn("This client is not authorized to perform this action " +
-            "because SASL authentication did not complete.");
-        } else {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("messageReceived(): authenticated client: " +
-              saslNettyServer.getUserName() + " is authorized to do request " +
-              "on server.");
-          }
-          writableRequest.doRequest(serverData, ctx);
-          alreadyDone = 0;
-        }
-      }
     } else {
-      LOG.info("messageReceived: Request id " +
-          writableRequest.getRequestId() + " from client " +
-          writableRequest.getClientId() +
-          " was already processed, " +
-          "not processing again.");
+      LOG.debug("THIS IS NOT A SASL ACTION: SENDING UPSTREAM.");
+      ctx.sendUpstream(e);
     }
-
-    NullReply nullReply = new NullReply();
-    nullReply.setWorkerId(myWorkerId);
-    nullReply.setRequestId(writableRequest.getRequestId());
-    nullReply.setAlreadyDone(alreadyDone);
-    e.getChannel().write(nullReply);
   }
 
   /**

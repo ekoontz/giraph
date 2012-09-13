@@ -98,24 +98,8 @@ public abstract class RequestServerHandler<R> extends
       return;
     }
 
-    // TODO: add a separate pipeline component here on server-side, called
-    // SaslServerCodec, dedicated to handling SASL interaction with clients.
     if (writableRequest.getType() == RequestType.SASL_TOKEN_MESSAGE) {
-      // initialize server-side SASL functionality.
-      SaslNettyServer saslNettyServer = NettyServer.channelSaslNettyServers.get(ctx.getChannel());
-      if (saslNettyServer == null) {
-        LOG.debug("No saslNettyServer for " + ctx.getChannel() +
-          " yet; creating now, with secret manager: " + serverData.secretManager);
-        saslNettyServer = new SaslNettyServer(serverData.secretManager);
-        NettyServer.channelSaslNettyServers.set(ctx.getChannel(),saslNettyServer);
-      } else {
-        LOG.debug("Found existing saslNettyServer on server:" +
-          ctx.getChannel().getLocalAddress() + " for client " +
-          ctx.getChannel().getRemoteAddress());
-      }
-      LOG.debug("messageReceived(): No accounting is being done on " +
-        "SASL messages (yet): calling doRequest() and returning.");
-      writableRequest.doRequest(serverData,ctx);
+      LOG.debug("WHY THE HECK DID WE GET HERE? A SASL TOKEN MESSAGE??" + writableRequest);
       return;
     }
 
