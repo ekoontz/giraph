@@ -57,7 +57,7 @@ public class WorkerSaslServerHandler<I extends WritableComparable,
     request.doRequest(serverData);
   }
 
-  /** Factory for {@link WorkerRequestServerHandler} */
+  /** Factory for {@link WorkerSaslServerHandler} */
   public static class Factory<I extends WritableComparable,
       V extends Writable, E extends Writable, M extends Writable> implements
       SaslServerHandler.Factory {
