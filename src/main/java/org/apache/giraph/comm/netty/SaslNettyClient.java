@@ -18,14 +18,20 @@
 
 package org.apache.giraph.comm.netty;
 
-import org.apache.giraph.graph.WorkerInfo;
+import org.apache.giraph.comm.requests.SaslTokenMessage;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapreduce.security.TokenCache;
+import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.SaslRpcServer;
 import org.apache.hadoop.security.SaslRpcServer.AuthMethod;
 import org.apache.hadoop.security.SaslRpcServer.SaslStatus;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.log4j.Logger;
 
 import javax.security.auth.callback.Callback;
@@ -40,7 +46,6 @@ import javax.security.sasl.SaslClient;
 import javax.security.sasl.SaslException;
 import java.io.DataInputStream;
 import java.io.IOException;
-import java.net.SocketAddress;
 
 /**
  * A utility class that encapsulates SASL logic for Giraph BSPWorker client
@@ -48,55 +53,61 @@ import java.net.SocketAddress;
 public class SaslNettyClient {
   public static final Logger LOG = Logger.getLogger(SaslNettyClient.class);
 
-  public final SaslClient saslClient;
+  public SaslClient saslClient;
 
   public Object authenticated = new Object();
 
   /**
-   * Create a SaslNettyClient for an authentication method
-   * 
-   * @param method
-   *          the requested authentication method
-   * @param token
-   *          token to use if needed by the authentication method
+   * Create a SaslNettyClient for authentication with BSP servers.
    */
-  public SaslNettyClient(AuthMethod method,
-      Token<? extends TokenIdentifier> token, String serverPrincipal)
-      throws IOException {
-    switch (method) {
-    case DIGEST:
-      if (LOG.isDebugEnabled())
+  public SaslNettyClient() {
+    try {
+      Token<? extends TokenIdentifier> token = createJobToken(new Configuration());
+      if (LOG.isDebugEnabled()) {
         LOG.debug("Creating SASL " + AuthMethod.DIGEST.getMechanismName()
             + " client to authenticate to service at " + token.getService());
+      }
       saslClient = Sasl.createSaslClient(new String[] { AuthMethod.DIGEST
           .getMechanismName() }, null, null, SaslRpcServer.SASL_DEFAULT_REALM,
           SaslRpcServer.SASL_PROPS, new SaslClientCallbackHandler(token));
-      break;
-    case KERBEROS:
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Creating SASL " + AuthMethod.KERBEROS.getMechanismName()
-            + " client. Server's Kerberos principal name is "
-            + serverPrincipal);
-      }
-      if (serverPrincipal == null || serverPrincipal.length() == 0) {
-        throw new IOException(
-            "Failed to specify server's Kerberos principal name");
-      }
-      String names[] = SaslRpcServer.splitKerberosName(serverPrincipal);
-      if (names.length != 3) {
-        throw new IOException(
-          "Kerberos principal name does NOT have the expected hostname part: "
-                + serverPrincipal);
-      }
-      saslClient = Sasl.createSaslClient(new String[] { AuthMethod.KERBEROS
-          .getMechanismName() }, null, names[0], names[1],
-          SaslRpcServer.SASL_PROPS, null);
-      break;
-    default:
-      throw new IOException("Unknown authentication method " + method);
+    } catch (IOException e) {
+      LOG.error("could not obtain job token for Netty Client to use to " +
+          "authenticate with a Netty Server.");
+      saslClient = null;
     }
-    if (saslClient == null)
-      throw new IOException("Unable to find SASL client implementation");
+  }
+
+  /**
+   * Obtain JobToken, which we'll use as a credential for SASL authentication
+   * when connecting to other Giraph BSPWorkers.
+   */
+  private Token<JobTokenIdentifier> createJobToken(Configuration conf)
+      throws IOException {
+    String localJobTokenFile = System.getenv().get(
+        UserGroupInformation.HADOOP_TOKEN_FILE_LOCATION);
+    if (localJobTokenFile != null) {
+      JobConf jobConf = new JobConf(conf);
+      Credentials credentials =
+          TokenCache.loadTokens(localJobTokenFile, jobConf);
+      return TokenCache.getJobToken(credentials);
+    } else {
+      throw new IOException("Cannot obtain authentication credentials for " +
+          "job: " +
+          "file: '" + UserGroupInformation.HADOOP_TOKEN_FILE_LOCATION +
+          "' not found");
+    }
+  }
+
+  public SaslTokenMessage firstToken()
+      throws IOException {
+    byte[] saslToken = new byte[0];
+    if (saslClient.hasInitialResponse()) {
+      saslToken = saslClient.evaluateChallenge(saslToken);
+    }
+    SaslTokenMessage saslTokenMessage =
+        new SaslTokenMessage();
+    saslTokenMessage.token = saslToken;
+    return saslTokenMessage;
   }
 
   public boolean isComplete() {

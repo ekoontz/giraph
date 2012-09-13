@@ -25,7 +25,6 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -43,17 +42,9 @@ import org.apache.giraph.comm.netty.handler.SaslClientHandler;
 import org.apache.giraph.comm.requests.SaslTokenMessage;
 import org.apache.giraph.comm.requests.WritableRequest;
 import org.apache.giraph.graph.GiraphJob;
-import org.apache.giraph.graph.WorkerInfo;
 import org.apache.giraph.utils.TimedLogger;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.Mapper;
-import org.apache.hadoop.mapreduce.security.TokenCache;
-import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
-import org.apache.hadoop.security.Credentials;
-import org.apache.hadoop.security.SaslRpcServer;
-import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.token.Token;
 import org.apache.log4j.Logger;
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.channel.Channel;
@@ -354,29 +345,18 @@ public class NettyClient {
   public void authenticateOnChannel(Channel channel) {
     LOG.debug("creating saslNettyClient now for channel: " + channel);
     try {
-      SaslNettyClient saslNettyClient = new SaslNettyClient(
-        SaslRpcServer.AuthMethod.DIGEST,
-        createJobToken(new Configuration()),null);
-      SASL.set(channel,saslNettyClient);
-
-      LOG.debug("storing saslNettyClient at key: " + channel);
-      LOG.debug("created: " + SASL.get(channel));
-
-      byte[] saslToken = new byte[0];
-      if (saslNettyClient.saslClient.hasInitialResponse()) {
-        saslToken = saslNettyClient.saslClient.evaluateChallenge(saslToken);
-      }
-      SaslTokenMessage saslTokenMessage =
-        new SaslTokenMessage();
-      saslTokenMessage.token = saslToken;
-      sendWritableRequest((InetSocketAddress)channel.getRemoteAddress(),
-        saslTokenMessage);
-
-      // We now wait for Netty's client threads to communicate over this
+      // We now wait for Netty's thread pool to communicate over this
       // channel to authenticate with another worker acting as a server.
       try {
         LOG.debug("authenticateOnChannel(): waiting for authentication " +
           "to complete..");
+        SaslNettyClient saslNettyClient = new SaslNettyClient();
+        SASL.set(channel, saslNettyClient);
+        SaslTokenMessage saslTokenMessage = saslNettyClient.firstToken();
+        // TODO: avoid this overloading of first argument (destinationWorkerId).
+        // Using -1 to mean: this is a SASL request, not a normal work request.
+        sendWritableRequest(-1, (InetSocketAddress)channel.getRemoteAddress(),
+            saslTokenMessage);
         synchronized(saslNettyClient.authenticated) {
           saslNettyClient.authenticated.wait();
         }
@@ -391,28 +371,6 @@ public class NettyClient {
     }
     return;
   }
-
-  /**
-   * Obtain JobToken, which we'll use as a credential for SASL authentication
-   * when connecting to other Giraph BSPWorkers.
-   */
-  private Token<JobTokenIdentifier> createJobToken(Configuration conf)
-    throws IOException {
-    String localJobTokenFile = System.getenv().get(
-      UserGroupInformation.HADOOP_TOKEN_FILE_LOCATION);
-    if (localJobTokenFile != null) {
-      JobConf jobConf = new JobConf(conf);
-      Credentials credentials =
-        TokenCache.loadTokens(localJobTokenFile, jobConf);
-      return TokenCache.getJobToken(credentials);
-    } else {
-      throw new IOException("Cannot obtain authentication credentials for " +
-        "job: " +
-        "file: '" + UserGroupInformation.HADOOP_TOKEN_FILE_LOCATION +
-        "' not found");
-    }
-  }
-
 
   /**
    * Stop the client.
@@ -501,13 +459,6 @@ public class NettyClient {
     throw new IllegalStateException("checkAndFixChannel: Failed to connect " +
         "to " + remoteServer + " in " + reconnectFailures +
         " connect attempts");
-  }
-
-  public void sendWritableRequest(InetSocketAddress remoteServer,
-                                  WritableRequest request) {
-    // TODO: avoid this overloading of first argument (destinationWorkerId).
-    // Using -1 to mean: this is a SASL request, not a normal work request.
-    sendWritableRequest(-1, remoteServer, request);
   }
 
   /**

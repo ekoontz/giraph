@@ -63,7 +63,7 @@ public class SaslClientHandler extends OneToOneDecoder {
       // get SASL client for this ctx.
       SaslNettyClient saslNettyClient = NettyClient.SASL.get(ctx.getChannel());
       if (saslNettyClient == null) {
-        throw new Exception("saslNettyClient was unexpectedly for channel: " +
+        throw new Exception("saslNettyClient was unexpectedly null for channel: " +
           ctx.getChannel());
       }
       if (decodedMessage.getClass() == SaslComplete.class) {
