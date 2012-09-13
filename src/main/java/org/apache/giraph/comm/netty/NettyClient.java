@@ -352,29 +352,34 @@ public class NettyClient {
   }
 
   public void authenticateOnChannel(Channel channel) {
-    LOG.debug("creating saslNettyClient now for channel: " + channel);
     try {
-      // We now wait for Netty's thread pool to communicate over this
-      // channel to authenticate with another worker acting as a server.
-      try {
-        LOG.debug("authenticateOnChannel(): waiting for authentication " +
-          "to complete..");
-        SaslNettyClient saslNettyClient = new SaslNettyClient();
+      SaslNettyClient saslNettyClient = SASL.get(channel);
+      if (SASL.get(channel) == null) {
+        LOG.debug("creating saslNettyClient now for channel: " + channel);
+        saslNettyClient = new SaslNettyClient();
         SASL.set(channel, saslNettyClient);
+      }
+      if (saslNettyClient.isComplete() == false) {
+        LOG.debug("authenticateOnChannel(): waiting for authentication " +
+            "to complete..");
         SaslTokenMessage saslTokenMessage = saslNettyClient.firstToken();
-        // TODO: avoid this overloading of first argument (destinationWorkerId).
+          // TODO: avoid this overloading of first argument (destinationWorkerId).
         // Using -1 to mean: this is a SASL request, not a normal work request.
         sendWritableRequest(-1, (InetSocketAddress)channel.getRemoteAddress(),
             saslTokenMessage);
-        synchronized(saslNettyClient.authenticated) {
-          saslNettyClient.authenticated.wait();
+        // We now wait for Netty's thread pool to communicate over this
+        // channel to authenticate with another worker acting as a server.
+        try {
+          synchronized(saslNettyClient.authenticated) {
+            saslNettyClient.authenticated.wait();
+          }
+        } catch (InterruptedException e) {
+          LOG.error("authenticateOnChannel(): interrupted while waiting for " +
+              "authentication.");
         }
-      } catch (InterruptedException e) {
-        LOG.error("authenticateOnChannel(): interrupted while waiting for " +
-          "authentication.");
       }
       LOG.debug("authenticateOnChannel(): Authentication on channel: " +
-        channel + " has completed successfully.");
+          channel + " has completed successfully.");
     } catch (IOException e) {
       LOG.error("authenticateOnChannel() Failed to authenticate with server due to error: " + e);
     }

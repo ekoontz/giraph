@@ -157,13 +157,6 @@ public class NettyWorkerClient<I extends WritableComparable,
             partitionOwner.getPartitionId()));
       }
     }
-
-    LOG.debug("(begin list of addresses to connect to)");
-    for(InetSocketAddress each: addresses) {
-      LOG.debug("address:" + each);
-    }
-    LOG.debug("(end list of addresses to connect to)");
-
     nettyClient.connectAllAddresses(addresses);
     LOG.debug("fixPartitionIdToSocketAddrMap() is done.");
   }
@@ -454,13 +447,15 @@ public class NettyWorkerClient<I extends WritableComparable,
   }
 
   @Override
-  public void setup() {
+  public void setup(boolean authenticate) {
     fixPartitionIdToSocketAddrMap();
+    if (authenticate) {
+      authenticate();
+    }
   }
 
   @Override
   public void authenticate() {
     nettyClient.authenticate();
   }
-
 }
