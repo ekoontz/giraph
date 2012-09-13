@@ -115,36 +115,6 @@ public class SaslNettyClient {
           WritableUtils.readString(inStream));
     }
   }
-  /**
-   * Use the provided the local saslClient to begin the process
-   * of SASL authentication with the server which is listening at remoteAddress.
-   * Low-level communication between client and server will be done in the form
-   * of writableRequests sent using the provided nettyClient.
-   *
-   * @param nettyClient: provides means of message communication with server.
-   *
-   *
-   * @throws IOException
-   */
-  public void saslInitialize(WorkerInfo workerInfo, SocketAddress remoteAddress,
-                             NettyClient nettyClient)
-      throws IOException {
-    byte[] saslToken = new byte[0];
-    try {
-      if (saslClient.hasInitialResponse()) {
-        saslToken = saslClient.evaluateChallenge(saslToken);
-      }
-      nettyClient.sendSaslToken(workerInfo, remoteAddress, saslToken);
-      return;
-    } catch (IOException e) {
-      try {
-        saslClient.dispose();
-      } catch (SaslException ignored) {
-        // ignore further exceptions during cleanup
-      }
-      throw e;
-    }
-  }
 
   public byte[] saslResponse(byte[] saslToken) {
     try {

@@ -386,25 +386,10 @@ public class NettyClient {
       }
       LOG.debug("authenticateOnChannel(): Authentication on channel: " +
         channel + " has completed successfully.");
-
-      // TODO: remove SaslDecoder from client pipeline: we don't need it anymore.
-
     } catch (IOException e) {
       LOG.error("authenticateOnChannel() Failed to authenticate with server due to error: " + e);
     }
     return;
-  }
-
-  // TODO: move to RequestEncoder or SaslTokenMessage.
-  public void sendSaslToken(WorkerInfo workerInfo,
-                            SocketAddress remoteServer, byte[] token) {
-    LOG.debug("sending sasl token of length: " + token.length +
-      " to remote server: " + remoteServer);
-    SaslTokenMessage saslTokenMessage = new SaslTokenMessage(token);
-    sendWritableRequest(workerInfo.getPartitionId(),
-      (InetSocketAddress) remoteServer, saslTokenMessage);
-    LOG.debug("sent sasl token of length: " + token.length +
-      " to remote server: " + remoteServer);
   }
 
   /**
