@@ -58,9 +58,10 @@ public class ResponseClientHandler extends OneToOneDecoder {
    *
    * @param conf Configuration
    */
-  public ResponseClientHandler(ConcurrentMap<ClientRequestId, RequestInfo>
-                                   workerIdOutstandingRequestMap,
-                               Configuration conf) {
+  public ResponseClientHandler(
+      ConcurrentMap<ClientRequestId, RequestInfo>
+          workerIdOutstandingRequestMap,
+      Configuration conf) {
     this.conf = conf;
     this.workerIdOutstandingRequestMap = workerIdOutstandingRequestMap;
     dropFirstResponse = conf.getBoolean(

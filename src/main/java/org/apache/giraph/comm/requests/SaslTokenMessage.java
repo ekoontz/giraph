@@ -88,8 +88,8 @@ public class SaslTokenMessage<I extends WritableComparable,
   }
 
   /**
-   *  Server-side SASL processing. See ResponseClientHandler for client-side.
-   *  SASL processing.
+   *  Server-side SASL processing. See SaslClientHandler for client-side SASL
+   *  processing.
    */
   @Override
   public void doRequest(ServerData<I, V, E, M> serverData, ChannelHandlerContext ctx) {

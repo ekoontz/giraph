@@ -135,7 +135,7 @@ public class NettyClient {
   private final int clientId;
   /** Used to authenticate with other workers acting as servers */
   public static final ChannelLocal<SaslNettyClient> SASL =
-    new ChannelLocal<SaslNettyClient>();
+      new ChannelLocal<SaslNettyClient>();
 
   /**
    * Only constructor
@@ -216,11 +216,11 @@ public class NettyClient {
       @Override
       public ChannelPipeline getPipeline() throws Exception {
         return Channels.pipeline(
-          byteCounter,
-          new LengthFieldBasedFrameDecoder(1024, 0, 4, 0, 4),
-          new RequestEncoder(),
-          new SaslClientHandler(clientRequestIdRequestInfoMap, conf),
-          new ResponseClientHandler(clientRequestIdRequestInfoMap, conf));
+            byteCounter,
+            new LengthFieldBasedFrameDecoder(1024, 0, 4, 0, 4),
+            new RequestEncoder(),
+            new SaslClientHandler(clientRequestIdRequestInfoMap, conf),
+            new ResponseClientHandler(clientRequestIdRequestInfoMap, conf));
       }
     });
   }
