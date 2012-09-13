@@ -98,11 +98,6 @@ public abstract class RequestServerHandler<R> extends
       return;
     }
 
-    if (writableRequest.getType() == RequestType.SASL_TOKEN_MESSAGE) {
-      LOG.debug("WHY THE HECK DID WE GET HERE? A SASL TOKEN MESSAGE??" + writableRequest);
-      return;
-    }
-
     // Only execute this request exactly once
     int alreadyDone = 1;
     if (workerRequestReservedMap.reserveRequest(
