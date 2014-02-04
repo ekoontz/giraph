@@ -502,7 +502,7 @@ public interface GiraphConstants {
   /** Where to place the netty client execution handle? */
   StrConfOption NETTY_CLIENT_EXECUTION_AFTER_HANDLER =
       new StrConfOption("giraph.nettyClientExecutionAfterHandler",
-          "requestEncoder",
+          "request-encoder",
           "Where to place the netty client execution handle?");
 
   /** Use the execution handler in netty on the server? */
