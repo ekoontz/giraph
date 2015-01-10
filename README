@@ -56,7 +56,7 @@ explicitly specify it with "mvn -Phadoop_0.20.203 <goals>".
 
 - Apache Hadoop 3.0.0-SNAPSHOT
 
-  You may tell maven to use this version with "mvn -Phadoop_trunk <goals>".
+  You may tell maven to use this version with "mvn -Phadoop_snapshot <goals>".
 
 Unsecure Hadoop versions:
 
