@@ -1300,7 +1300,7 @@ under the License.
         <module>giraph-dist</module>
       </modules>
        <properties>
-         <hadoop.version>2.5.1</hadoop.version>
+         <hadoop.version>2.6.0</hadoop.version>
          <!-- TODO: add these checks eventually -->
          <project.enforcer.skip>true</project.enforcer.skip>
          <giraph.maven.dependency.plugin.skip>true</giraph.maven.dependency.plugin.skip>
@@ -1320,47 +1320,6 @@ under the License.
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-auth</artifactId>
         </dependency>
-         <dependency>
-           <groupId>org.apache.hadoop</groupId>
-           <artifactId>hadoop-common</artifactId>
-         </dependency>
-         <dependency>
-           <groupId>org.apache.hadoop</groupId>
-           <artifactId>hadoop-mapreduce-client-common</artifactId>
-         </dependency>
-         <dependency>
-           <groupId>org.apache.hadoop</groupId>
-           <artifactId>hadoop-mapreduce-client-core</artifactId>
-         </dependency>
-       </dependencies>
-     </profile>
-
-     <profile>
-       <id>hadoop_2.6</id>
-       <modules>
-         <module>giraph-dist</module>
-       </modules>
-       <properties>
-         <hadoop.version>2.6.0</hadoop.version>
-         <!-- TODO: add these checks eventually -->
-         <project.enforcer.skip>true</project.enforcer.skip>
-         <giraph.maven.dependency.plugin.skip>true</giraph.maven.dependency.plugin.skip>
-         <giraph.maven.duplicate.finder.skip>true</giraph.maven.duplicate.finder.skip>
-       </properties>
-       <dependencies>
-         <!-- sorted lexicographically -->
-         <dependency>
-           <groupId>commons-configuration</groupId>
-           <artifactId>commons-configuration</artifactId>
-         </dependency>
-         <dependency>
-           <groupId>commons-httpclient</groupId>
-           <artifactId>commons-httpclient</artifactId>
-         </dependency>
-         <dependency>
-           <groupId>org.apache.hadoop</groupId>
-           <artifactId>hadoop-auth</artifactId>
-         </dependency>
          <dependency>
            <groupId>org.apache.hadoop</groupId>
            <artifactId>hadoop-common</artifactId>
