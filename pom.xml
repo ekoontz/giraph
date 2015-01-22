@@ -1300,6 +1300,8 @@ under the License.
         <module>giraph-dist</module>
       </modules>
        <properties>
+	 <!-- this profile (hadoop_2) should track the latest Apache Hadoop release,
+	      per: http://hadoop.apache.org/#News -->
          <hadoop.version>2.6.0</hadoop.version>
          <!-- TODO: add these checks eventually -->
          <project.enforcer.skip>true</project.enforcer.skip>
